@@ -20,6 +20,10 @@ std::vector<std::wstring> cardinal_tensor_labels() {
           L"λ",
           L"h",
           L"f",
+          L"G",
+          L"w",
+          L"Q",
+          L"eQ",
           L"f̃",
           L"g",
           L"t",
@@ -52,6 +56,10 @@ OpClass to_class(OpType op) {
   switch (op) {
     case OpType::h:
     case OpType::f:
+    case OpType::G:
+    case OpType::w:
+    case OpType::Q:
+    case OpType::eQ:
     case OpType::f̃:
     case OpType::g:
     case OpType::RDM:

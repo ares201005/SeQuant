@@ -119,6 +119,30 @@ OpMaker::OpMaker(OpType op, std::size_t nbra, std::size_t nket)
   }
 }
 
+BOpMaker::BOpMaker(OpType op, std::size_t nbra, std::size_t nket)
+    : base_type(op) {
+  nket = nket == std::numeric_limits<std::size_t>::max() ? nbra : nket;
+  assert(nbra > 0 || nket > 0);
+
+  const auto unocc = IndexSpace::active_unoccupied;
+  const auto occ = IndexSpace::active_occupied;
+  switch (to_class(op)) {
+    case OpClass::ex:
+      bra_spaces_ = decltype(bra_spaces_)(nbra, unocc);
+      ket_spaces_ = decltype(ket_spaces_)(nket, occ);
+      break;
+    case OpClass::deex:
+      bra_spaces_ = decltype(bra_spaces_)(nbra, occ);
+      ket_spaces_ = decltype(ket_spaces_)(nket, unocc);
+      break;
+    case OpClass::gen:
+      bra_spaces_ = decltype(bra_spaces_)(nbra, IndexSpace::complete);
+      ket_spaces_ = decltype(ket_spaces_)(nket, IndexSpace::complete);
+      break;
+  }
+}
+
+
 #include "../mbpt/sr/op.impl.cpp"
 
 ExprPtr H0mp() { return F(); }
@@ -159,6 +183,43 @@ ExprPtr H_(std::size_t k) {
 ExprPtr H(std::size_t k) {
   assert(k > 0 && k <= 2);
   return k == 1 ? H_(1) : H_(1) + H_(2);
+}
+
+// bosonic operator (todo)
+ExprPtr Hw_(std::size_t k) {
+  assert(k > 0 && k <= 2);
+  switch (k) {
+    case 1:
+      switch (get_default_context().vacuum()) {
+        case Vacuum::Physical:
+          return BOpMaker(OpType::G, 1)();
+        case Vacuum::SingleProduct:
+          return BOpMaker(OpType::G, 1)();
+        case Vacuum::MultiProduct:
+          abort();
+        default:
+          abort();
+      }
+
+    case 2:
+      return BOpMaker(OpType::w, 2)();
+
+    default:
+      abort();
+  }
+}
+
+
+ExprPtr Hw(std::size_t k) {
+  assert(k > 0 && k <= 2);
+  return k == 1 ? Hw_(1) : Hw_(2);
+  //return k == 1 ? Hw_(1) : Hw_(1) + Hw_(2);
+}
+
+
+// f-bosonic interaction operator
+ExprPtr Hep() {
+  return BOpMaker(OpType::eQ, 1)(); //
 }
 
 ExprPtr F(bool use_f_tensor) {

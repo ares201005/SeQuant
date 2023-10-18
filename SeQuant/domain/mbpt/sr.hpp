@@ -133,6 +133,29 @@ class OpMaker : public mbpt::OpMaker<Statistics::FermiDirac> {
   using base_type::operator();
 };
 
+
+class BOpMaker : public mbpt::OpMaker<Statistics::BoseEinstein> {
+ public:
+  using base_type = mbpt::OpMaker<Statistics::BoseEinstein>;
+
+  using base_type::base_type;
+
+  // clang-format off
+  /// @param[in] op the operator type:
+  /// - if @p op is a (pure) excitation operator bra/ket indices
+  ///   will be IndexSpace::active_unoccupied/IndexSpace::active_occupied,
+  /// - for (pure) deexcitation @p op bra/ket will be IndexSpace::active_occupied/IndexSpace::active_unoccupied
+  /// - for general @p op bra/ket will be IndexSpace::complete
+  /// @param[in] nbra number of bra indices/creators
+  /// @param[in] nket number of ket indices/annihilators; if not specified, will be set to @p nbra
+  // clang-format on
+  BOpMaker(OpType op, std::size_t nbra,
+          std::size_t nket = std::numeric_limits<std::size_t>::max());
+
+  using base_type::operator();
+};
+
+
 #include "../mbpt/sr/op.impl.hpp"
 
 /// @name tensor-level SR MBPT operators
@@ -152,6 +175,10 @@ ExprPtr H_(std::size_t k);
 /// @param[in] k the maximum rank of the particle interactions; only `k<=2` is
 /// supported
 ExprPtr H(std::size_t k = 2);
+
+ExprPtr Hw(std::size_t k = 2);
+ExprPtr Hw_(std::size_t k);
+ExprPtr Hep();
 
 /// @brief Fock operator
 /// @param use_f_tensor if true, will use Fock tensor, else will use tensors

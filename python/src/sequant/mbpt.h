@@ -39,6 +39,10 @@ inline void __init__(py::module m) {
         "H(k = 2) returns a Hamiltonian operator with up to k-body terms",
         py::arg("k") = 2);
 
+  m.def("Hw", &sequant::mbpt::sr::Hw,
+        "Hw(k = 2) returns a bosonic Hamiltonian operator with up to k-body terms",
+        py::arg("k") = 2);
+
   m.def(SR_OP(A));
   m.def(SR_OP(T));
   m.def(SR_OP(T_));

@@ -26,6 +26,10 @@ bool is_vacuum(QuantumNumbers qns);
 enum class OpType {
   h,    //!< 1-body Hamiltonian
   f,    //!< Fock operator
+  G,    //!< 1-bosonic operator, G  b
+  w,    //!< 2-bosonic operator, w b^\dag b
+  Q,    //!< Dispalcement operator, (b^\dag_n + b_n)
+  eQ,   //!< e-p coupling operator a^\dag_u a_v (b^\dag_n + b_n)
   f̃,    //!< closed Fock operator (i.e. Fock operator due to fully-occupied
         //!< orbitals)
   g,    //!< 2-body Coulomb
@@ -48,6 +52,10 @@ enum class OpType {
 inline const std::map<OpType, std::wstring> optype2label{
     {OpType::h, L"h"},
     {OpType::f, L"f"},
+    {OpType::G, L"G"},
+    {OpType::w, L"w"},
+    {OpType::Q, L"Q"},
+    {OpType::eQ, L"eQ"},
     {OpType::f̃, L"f̃"},
     {OpType::g, L"g"},
     {OpType::t, L"t"},

@@ -265,6 +265,8 @@ set(SeQuant_src
         SeQuant/domain/mbpt/mr.hpp
         SeQuant/domain/mbpt/models/cc.cpp
         SeQuant/domain/mbpt/models/cc.hpp
+        SeQuant/domain/mbpt/models/qedcc.cpp
+        SeQuant/domain/mbpt/models/qedcc.hpp
         SeQuant/domain/mbpt/op.cpp
         SeQuant/domain/mbpt/op.hpp
         SeQuant/domain/mbpt/op.ipp
@@ -510,8 +512,8 @@ if (BUILD_TESTING)
     endif (BTAS_SOURCE_DIR)
 
 
-    foreach (i RANGE 8 11)
-      math(EXPR s "${i} - 7") # map 8..11 -> 1..4
+    foreach (i RANGE 8 12)
+      math(EXPR s "${i} - 7") # map 8..12 -> 1..5
       set(example${i} synopsis${s})
       add_executable(${example${i}} EXCLUDE_FROM_ALL
               examples/synopsis/${example${i}}.cpp)
@@ -519,7 +521,7 @@ if (BUILD_TESTING)
     endforeach ()
 
     # add tests for running examples
-    set(lastexample 11)
+    set(lastexample 13)
     foreach (i RANGE ${lastexample})
         if (TARGET ${example${i}})
             add_dependencies(examples-sequant ${example${i}})

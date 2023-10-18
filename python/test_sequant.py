@@ -35,6 +35,8 @@ class TestSequant(unittest.TestCase):
     ccsd = VacuumAverage( A(-2) * H() * T(2) * T(2), [(1, 2), (1, 3)] );
     print (ccsd.latex)
 
+    print("\nH=", H().latex, "\n")
+
     class String:
       def Sum(self,*args):
         return "(%s)" % " + ".join(visit(self,a) for a in args)

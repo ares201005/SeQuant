@@ -1,6 +1,12 @@
 project(python-sequant)
 cmake_minimum_required(VERSION 3.11)
 
+# find the python path
+#find_package(Python3 COMPONENTS Interpreter Development) # REQUIRED VERSION 3.8)
+#message(STATUS "Python executable: ${Python3_EXECUTABLE}")
+#message(STATUS "Python include dirs: ${Python3_INCLUDE_DIRS}")
+#message(STATUS "Python libraries: ${Python3_LIBRARIES}")
+
 FetchContent_Declare(
     pybind11
     GIT_REPOSITORY https://github.com/ValeevGroup/pybind11.git
