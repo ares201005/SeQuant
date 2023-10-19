@@ -58,8 +58,6 @@ OpClass to_class(OpType op) {
     case OpType::f:
     case OpType::G:
     case OpType::w:
-    case OpType::Q:
-    case OpType::eQ:
     case OpType::f̃:
     case OpType::g:
     case OpType::RDM:
@@ -68,6 +66,10 @@ OpClass to_class(OpType op) {
     case OpType::A:
     case OpType::S:
       return OpClass::gen;
+    case OpType::Q:
+      return OpClass::disp;
+    case OpType::eQ:
+      return OpClass::coupling;
     case OpType::t:
     case OpType::R:
     case OpType::R12:
@@ -211,6 +213,53 @@ ExprPtr OpMaker<S>::operator()(std::optional<UseDepIdx> dep,
       },
       dep ? *dep : UseDepIdx::None);
 }
+
+
+// F-B coupling operator
+FBOpMaker::FBOpMaker(OpType op, std::initializer_list<IndexSpace::Type> bras,
+                    std::initializer_list<IndexSpace::Type> kets)
+    : op_(op),
+      bra_spaces_(bras.begin(), bras.end()),
+      ket_spaces_(kets.begin(), kets.end()) {
+  assert(nbra() > 0 || nket() > 0);
+}
+
+FBOpMaker::FBOpMaker(OpType op) : op_(op) {}
+
+ExprPtr FBOpMaker::operator()(std::optional<UseDepIdx> dep,
+                               std::optional<Symmetry> opsymm_opt) const {
+  bool dep_bra = false;
+  bool dep_ket = false;
+  // if not given dep, use mbpt::Context::CSV to determine whether to use
+  // dependent indices for pure (de)excitation ops
+  if (!dep && get_default_formalism().csv() == mbpt::CSV::Yes) {
+    if (to_class(op_) == OpClass::ex) {
+      for (auto&& s : bra_spaces_) {
+        assert(s == IndexSpace::complete_unoccupied ||
+               s == IndexSpace::active_unoccupied);
+      }
+      dep = UseDepIdx::Bra;
+    } else if (to_class(op_) == OpClass::deex) {
+      for (auto&& s : ket_spaces_) {
+        assert(s == IndexSpace::complete_unoccupied ||
+               s == IndexSpace::active_unoccupied);
+      }
+      dep = UseDepIdx::Ket;
+    } else {
+      dep = UseDepIdx::None;
+    }
+  }
+
+  return make(
+      bra_spaces_, ket_spaces_,
+      [this, opsymm_opt](const auto& braidxs, const auto& ketidxs,
+                         Symmetry opsymm) {
+        return ex<Tensor>(to_wstring(op_), braidxs, ketidxs,
+                          opsymm_opt ? *opsymm_opt : opsymm);
+      },
+      dep ? *dep : UseDepIdx::None);
+}
+
 
 template class OpMaker<Statistics::FermiDirac>;
 template class OpMaker<Statistics::BoseEinstein>;

@@ -28,10 +28,14 @@ int main() {
                              .compute())
              << std::endl;
 
+  auto bop1 = bcrex(p1);
+
+  std::wcout << "\n b^dagger = " << to_latex(bop1) << std::endl;
+
   auto nop3 = ex<BNOperator>(std::array{p1, p2}, std::array{p3, p4});
   auto nop4 = ex<BNOperator>(std::array{p5, p6}, std::array{p7});
 
-  std::wcout << to_latex(nop3 * nop4) << " = "
+  std::wcout << "\n" << to_latex(nop3 * nop4) << " = "
              << to_latex(BWickTheorem{nop3 * nop4}
                              .set_external_indices(
                                  std::array{p1, p2, p3, p4, p5, p6, p7})

@@ -139,6 +139,49 @@ BOpMaker::BOpMaker(OpType op, std::size_t nbra, std::size_t nket)
       bra_spaces_ = decltype(bra_spaces_)(nbra, IndexSpace::complete);
       ket_spaces_ = decltype(ket_spaces_)(nket, IndexSpace::complete);
       break;
+    case OpClass::disp:
+      bra_spaces_ = decltype(bra_spaces_)(nbra, IndexSpace::complete);
+      ket_spaces_ = decltype(ket_spaces_)(nket, IndexSpace::complete);
+      break;
+    case OpClass::coupling:
+      bra_spaces_ = decltype(bra_spaces_)(nbra, IndexSpace::complete);
+      ket_spaces_ = decltype(ket_spaces_)(nket, IndexSpace::complete);
+      break;
+  }
+}
+
+
+//FBOpMaker::FBOpMaker(OpType op, std::size_t nbra, std::size_t nket, std::size_t nbra_b)
+FBOpMaker::FBOpMaker(OpType op, std::size_t nbra, std::size_t nket)
+    : base_type(op) {
+  nket = nket == std::numeric_limits<std::size_t>::max() ? nbra : nket;
+  assert(nbra > 0 || nket > 0);
+
+  const auto unocc = IndexSpace::active_unoccupied;
+  const auto occ = IndexSpace::active_occupied;
+  switch (to_class(op)) {
+    case OpClass::ex:
+      bra_spaces_ = decltype(bra_spaces_)(nbra, unocc);
+      ket_spaces_ = decltype(ket_spaces_)(nket, occ);
+      break;
+    case OpClass::deex:
+      bra_spaces_ = decltype(bra_spaces_)(nbra, occ);
+      ket_spaces_ = decltype(ket_spaces_)(nket, unocc);
+      break;
+    case OpClass::gen:
+      bra_spaces_ = decltype(bra_spaces_)(nbra, IndexSpace::complete);
+      ket_spaces_ = decltype(ket_spaces_)(nket, IndexSpace::complete);
+      break;
+    case OpClass::disp:
+      bra_spaces_ = decltype(bra_spaces_)(nbra, IndexSpace::complete);
+      ket_spaces_ = decltype(ket_spaces_)(nket, IndexSpace::complete);
+      break;
+    case OpClass::coupling:
+      bra_spaces_ = decltype(bra_spaces_)(nbra, IndexSpace::complete);
+      ket_spaces_ = decltype(ket_spaces_)(nket, IndexSpace::complete);
+      //bra_spaces_b = decltype(bra_spaces_b)(nbra_b, IndexSpace::complete);
+      //ket_spaces_b = decltype(ket_spaces_b)(nbra_b, IndexSpace::complete);
+      break;
   }
 }
 
@@ -219,7 +262,7 @@ ExprPtr Hw(std::size_t k) {
 
 // f-bosonic interaction operator
 ExprPtr Hep() {
-  return BOpMaker(OpType::eQ, 1)(); //
+  return FBOpMaker(OpType::eQ, 1)(); //
 }
 
 ExprPtr F(bool use_f_tensor) {

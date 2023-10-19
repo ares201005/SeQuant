@@ -156,6 +156,29 @@ class BOpMaker : public mbpt::OpMaker<Statistics::BoseEinstein> {
 };
 
 
+class FBOpMaker : public mbpt::FBOpMaker {
+ public:
+  using base_type = mbpt::FBOpMaker;
+
+  using base_type::base_type;
+
+  // clang-format off
+  /// @param[in] op the operator type:
+  /// - if @p op is a (pure) excitation operator bra/ket indices
+  ///   will be IndexSpace::active_unoccupied/IndexSpace::active_occupied,
+  /// - for (pure) deexcitation @p op bra/ket will be IndexSpace::active_occupied/IndexSpace::active_unoccupied
+  /// - for general @p op bra/ket will be IndexSpace::complete
+  /// @param[in] nbra number of bra indices/creators
+  /// @param[in] nket number of ket indices/annihilators; if not specified, will be set to @p nbra
+  // clang-format on
+  FBOpMaker(OpType op, std::size_t nbra,
+          std::size_t nket = std::numeric_limits<std::size_t>::max());
+
+  using base_type::operator();
+};
+
+
+
 #include "../mbpt/sr/op.impl.hpp"
 
 /// @name tensor-level SR MBPT operators

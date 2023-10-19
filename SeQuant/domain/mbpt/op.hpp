@@ -79,7 +79,7 @@ inline const std::map<std::wstring, OpType> label2optype =
     ranges::to<std::map<std::wstring, OpType>>();
 
 /// Operator character relative to Fermi vacuum
-enum class OpClass { ex, deex, gen };
+enum class OpClass { ex, deex, gen, disp, coupling};
 
 /// @return the tensor labels in the cardinal order
 std::vector<std::wstring> cardinal_tensor_labels();
@@ -525,6 +525,155 @@ class OpMaker {
 
 extern template class OpMaker<Statistics::FermiDirac>;
 extern template class OpMaker<Statistics::BoseEinstein>;
+
+
+// make Fermionic-Bosonic coupling operator
+class FBOpMaker {
+ public:
+  /// @param[in] op the operator type
+  /// @param[in] bras the bra indices/creators
+  /// @param[in] kets the ket indices/annihilators
+  FBOpMaker(OpType op, std::initializer_list<IndexSpace::Type> bras,
+          std::initializer_list<IndexSpace::Type> kets);
+
+  /// @param[in] op the operator type
+  /// @param[in] bras the bra indices/creators
+  /// @param[in] kets the ket indices/annihilators
+  template <typename IndexSpaceTypeRange1, typename IndexSpaceTypeRange2>
+  FBOpMaker(OpType op, IndexSpaceTypeRange1&& bras, IndexSpaceTypeRange2&& kets)
+      : op_(op),
+        bra_spaces_(bras.begin(), bras.end()),
+        ket_spaces_(kets.begin(), kets.end()) {
+    assert(nbra() > 0 || nket() > 0);
+  }
+
+  enum class UseDepIdx {
+    /// bra/cre indices depend on ket
+    Bra,
+    /// ket/ann indices depend on bra
+    Ket,
+    /// use plain indices
+    None
+  };
+
+  // clang-format off
+  /// @param[in] dep_opt if given, controls whether bra (`*dep_opt == UseDepIdx::Bra`)
+  /// / ket (`*dep_opt == UseDepIdx::Ket`) indices
+  /// are dependent on the, respectively, ket/bra indices
+  /// (i.e., use them as protoindices);
+  /// if (`*dep_opt == UseDepIdx::None`) then plain indices are used; if
+  /// \p dep_opt is not given then the default is determined by the MBPT context.
+  /// @param[in] opsymm_opt if given, controls whether (anti)symmetric
+  /// tensor is returned; if \p opsymm_opt is not given then the default is
+  /// determined by the MBPT context.
+  // clang-format on
+  ExprPtr operator()(std::optional<UseDepIdx> dep_opt = {},
+                     std::optional<Symmetry> opsymm_opt = {}) const;
+
+  /// @tparam TensorGenerator callable with signature
+  /// `TensorGenerator(range<Index>, range<Index>, Symmetry)` that returns a
+  /// Tensor with the respective bra and ket indices and of the given symmetry
+  /// @param[in] bras the bra indices/creators
+  /// @param[in] kets the ket indices/annihilators
+  /// @param[in] tensor_generator the callable that generates the tensor
+  /// @param[in] dep whether to use dependent indices
+  template <typename TensorGenerator>
+  static ExprPtr make(const container::svector<IndexSpace::Type>& bras,
+                      const container::svector<IndexSpace::Type>& kets,
+                      TensorGenerator&& tensor_generator,
+                      UseDepIdx dep = UseDepIdx::None) {
+    const bool symm =
+        get_default_context().spbasis() ==
+        SPBasis::spinorbital;  // antisymmetrize if spin-orbital basis
+    const auto dep_bra = dep == UseDepIdx::Bra;
+    const auto dep_ket = dep == UseDepIdx::Ket;
+
+    // not sure what it means to use nonsymmetric operator if nbra != nket
+    using ranges::size;
+    if (!symm) assert(size(bras) == size(kets));
+
+    auto make_idx_vector = [](const auto& spacetypes) {
+      std::vector<Index> result;
+      const auto n = spacetypes.size();
+      result.reserve(n);
+      for (size_t i = 0; i != n; ++i) {
+        auto space = IndexSpace::instance(spacetypes[i]);
+        result.push_back(Index::make_tmp_index(space));
+      }
+      return result;
+    };
+
+    auto make_depidx_vector = [](const auto& spacetypes, auto&& protoidxs) {
+      const auto n = spacetypes.size();
+      std::vector<Index> result;
+      result.reserve(n);
+      for (size_t i = 0; i != n; ++i) {
+        auto space = IndexSpace::instance(spacetypes[i]);
+        result.push_back(Index::make_tmp_index(space, protoidxs, true));
+      }
+      return result;
+    };
+
+    std::vector<Index> braidxs, ketidxs;
+    if (dep_bra) {
+      ketidxs = make_idx_vector(kets);
+      braidxs = make_depidx_vector(bras, ketidxs);
+    } else if (dep_ket) {
+      braidxs = make_idx_vector(bras);
+      ketidxs = make_depidx_vector(kets, braidxs);
+    } else {
+      braidxs = make_idx_vector(bras);
+      ketidxs = make_idx_vector(kets);
+    }
+
+    const auto mult = symm ? factorial(size(bras)) * factorial(size(kets))
+                           : factorial(size(bras));
+    const auto opsymm = symm ? Symmetry::symm : Symmetry::nonsymm;
+
+    //std::cout<< "\n braidxs =" << braidxs << std::endl;
+
+    return ex<Constant>(rational{1, mult}) *
+           tensor_generator(braidxs, ketidxs, opsymm) *
+           ex<NormalOperator<Statistics::FermiDirac>>(
+	                         /* creators */ braidxs,
+                                 /* annihilators */ ketidxs,
+                                 get_default_context().vacuum()) *
+	   // not done yet, should be b^\dagger + b
+           (
+           //ex<NormalOperator<Statistics::BoseEinstein>>(
+           ex<BNOperator>(/* creators */ braidxs,
+                          /* annihilators */ ketidxs,
+                          get_default_context().vacuum())
+	   +
+           //ex<NormalOperator<Statistics::BoseEinstein>>(
+           ex<BNOperator>(/* creators */ braidxs,
+                          /* annihilators */ ketidxs,
+                          get_default_context().vacuum())
+	   );
+  }
+
+  template <typename TensorGenerator>
+  static ExprPtr make(std::initializer_list<IndexSpace::Type> bras,
+                      std::initializer_list<IndexSpace::Type> kets,
+                      TensorGenerator&& tensor_generator,
+                      UseDepIdx csv = UseDepIdx::None) {
+    container::svector<IndexSpace::Type> bra_vec(bras.begin(), bras.end());
+    container::svector<IndexSpace::Type> ket_vec(kets.begin(), kets.end());
+    return FBOpMaker::make(
+        bra_vec, ket_vec, std::forward<TensorGenerator>(tensor_generator), csv);
+  }
+
+ protected:
+  OpType op_;
+  container::svector<IndexSpace::Type> bra_spaces_;
+  container::svector<IndexSpace::Type> ket_spaces_;
+
+  FBOpMaker(OpType op);
+
+  const auto nbra() const { return bra_spaces_.size(); };
+  const auto nket() const { return ket_spaces_.size(); };
+};
+
 
 /// \tparam QuantumNumbers a sequence of quantum numbers, must be
 /// default-initializable
