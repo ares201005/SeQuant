@@ -24,6 +24,29 @@ ExprPtr L_(std::size_t Nbra, std::size_t Nket) {
   return OpMaker(OpType::L, Nbra, Nket)();
 }
 
+ExprPtr H_pt(std::size_t o, std::size_t R) {
+  assert(o == 1 &&
+         "sequant::sr::H_pt(): only supports first order perturbation");
+  assert(R > 0);
+  return OpMaker(OpType::h_1, R)();
+}
+
+ExprPtr T_pt_(std::size_t o, std::size_t Nbra, std::size_t Nket) {
+  assert(o == 1 &&
+         "sequant::sr::T_pt_(): only supports first order perturbation");
+  assert(Nbra > 0);
+  assert(Nket > 0);
+  return OpMaker(OpType::t_1, Nbra, Nket)();
+}
+
+ExprPtr Λ_pt_(std::size_t o, std::size_t Nbra, std::size_t Nket) {
+  assert(o == 1 &&
+         "sequant::sr::Λ_pt_(): only supports first order perturbation");
+  assert(Nbra > 0);
+  assert(Nket > 0);
+  return OpMaker(OpType::λ_1, Nbra, Nket)();
+}
+
 namespace detail {
 
 /// constructs a sum of ops up to a given bra/ket rank
@@ -109,18 +132,20 @@ ExprPtr A(std::int64_t Kh, std::int64_t Kp) {
 
   container::svector<IndexSpace::Type> creators;
   container::svector<IndexSpace::Type> annihilators;
-  if (Kh > 0)
-    for (auto i : ranges::views::iota(0, Kh))
+  if (Kh > 0) {
+    for ([[maybe_unused]] auto i : ranges::views::iota(0, Kh))
       annihilators.emplace_back(IndexSpace::active_occupied);
-  else
-    for (auto i : ranges::views::iota(0, -Kh))
+  } else {
+    for ([[maybe_unused]] auto i : ranges::views::iota(0, -Kh))
       creators.emplace_back(IndexSpace::active_occupied);
-  if (Kp > 0)
-    for (auto i : ranges::views::iota(0, Kp))
+  }
+  if (Kp > 0) {
+    for ([[maybe_unused]] auto i : ranges::views::iota(0, Kp))
       creators.emplace_back(IndexSpace::active_unoccupied);
-  else
-    for (auto i : ranges::views::iota(0, -Kp))
+  } else {
+    for ([[maybe_unused]] auto i : ranges::views::iota(0, -Kp))
       annihilators.emplace_back(IndexSpace::active_unoccupied);
+  }
 
   std::optional<OpMaker::UseDepIdx> dep;
   if (get_default_formalism().csv() == mbpt::CSV::Yes)
@@ -138,18 +163,20 @@ ExprPtr S(std::int64_t Kh, std::int64_t Kp) {
 
   container::svector<IndexSpace::Type> creators;
   container::svector<IndexSpace::Type> annihilators;
-  if (Kh > 0)
-    for (auto i : ranges::views::iota(0, Kh))
+  if (Kh > 0) {
+    for ([[maybe_unused]] auto i : ranges::views::iota(0, Kh))
       annihilators.emplace_back(IndexSpace::active_occupied);
-  else
-    for (auto i : ranges::views::iota(0, -Kh))
+  } else {
+    for ([[maybe_unused]] auto i : ranges::views::iota(0, -Kh))
       creators.emplace_back(IndexSpace::active_occupied);
-  if (Kp > 0)
-    for (auto i : ranges::views::iota(0, Kp))
+  }
+  if (Kp > 0) {
+    for ([[maybe_unused]] auto i : ranges::views::iota(0, Kp))
       creators.emplace_back(IndexSpace::active_unoccupied);
-  else
-    for (auto i : ranges::views::iota(0, -Kp))
+  } else {
+    for ([[maybe_unused]] auto i : ranges::views::iota(0, -Kp))
       annihilators.emplace_back(IndexSpace::active_unoccupied);
+  }
 
   std::optional<OpMaker::UseDepIdx> dep;
   if (get_default_formalism().csv() == mbpt::CSV::Yes)

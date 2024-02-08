@@ -36,10 +36,10 @@ TEST_CASE("IndexSpace", "[elements]") {
 
   SECTION("register_key") {
     REQUIRE_NOTHROW(IndexSpace::register_key(
-        L"g",
+        L"w",
         IndexSpace::all));  // can assign additional key to a space already
                             // registered, this does not redefine base key
-    REQUIRE(IndexSpace::instance(L"g") == IndexSpace::instance(L"p"));
+    REQUIRE(IndexSpace::instance(L"w") == IndexSpace::instance(L"p"));
   }
 
   SECTION("equality") {
@@ -57,6 +57,15 @@ TEST_CASE("IndexSpace", "[elements]") {
     REQUIRE(IndexSpace::instance(L"i") == IndexSpace::nullqns);
     REQUIRE(IndexSpace::nullqns == IndexSpace::instance(L"i").qns());
     REQUIRE(IndexSpace::nullqns == IndexSpace::instance(L"i"));
+
+    // use nondefault mask
+    TypeAttr::used_bits = 0b100;
+    REQUIRE(IndexSpace::active_occupied == IndexSpace::occupied);
+    REQUIRE(IndexSpace::active_occupied != IndexSpace::inactive_occupied);
+    REQUIRE(IndexSpace::active_occupied != IndexSpace::frozen_occupied);
+    REQUIRE(IndexSpace::active_occupied == IndexSpace::all);
+    REQUIRE(IndexSpace::active_occupied == IndexSpace::all_active);
+    TypeAttr::used_bits = 0xffff;
   }
 
   SECTION("ordering") {
@@ -73,7 +82,7 @@ TEST_CASE("IndexSpace", "[elements]") {
     // test ordering with quantum numbers
     {
       auto i = IndexSpace::instance(L"i");
-      auto a = IndexSpace::instance(L"a");
+      [[maybe_unused]] auto a = IndexSpace::instance(L"a");
       auto iA =
           IndexSpace::instance(IndexSpace::active_occupied, IndexSpace::alpha);
       auto iB =
@@ -93,6 +102,15 @@ TEST_CASE("IndexSpace", "[elements]") {
       REQUIRE(i < iA);
       REQUIRE(i < iB);
     }
+
+    // use nondefault mask
+    TypeAttr::used_bits = 0b100;
+    REQUIRE(!(IndexSpace::active_occupied < IndexSpace::occupied));
+    REQUIRE(!(IndexSpace::inactive_occupied < IndexSpace::frozen_occupied));
+    REQUIRE(IndexSpace::inactive_occupied < IndexSpace::active_occupied);
+    REQUIRE(!(IndexSpace::active_occupied < IndexSpace::all));
+    REQUIRE(!(IndexSpace::active_occupied < IndexSpace::all_active));
+    TypeAttr::used_bits = 0xffff;
   }
 
   SECTION("set operations") {

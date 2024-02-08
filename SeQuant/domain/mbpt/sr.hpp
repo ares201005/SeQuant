@@ -245,20 +245,31 @@ ExprPtr H_(std::size_t k);
 /// supported
 ExprPtr H(std::size_t k = 2);
 
-/// makes particle-conserving excitation operator of rank \p K
+/// makes traditional cluster operator of particle rank \p K
+/// @param K the particle rank
+/// @return \f$ \frac{1}{(K!)^2}\sum t^{i_1 \dots i_K}_{a_1 \dots a_K} a_{i_1
+/// \dots i_K}^{a_1 \dots a_K} \f$
+/// @note traditional = pure-excitation
 ExprPtr T_(std::size_t K);
 
-/// makes sum of particle-conserving excitation operators of all ranks up to \p
-/// K
-ExprPtr T(std::size_t K);
+/// makes sum of T_() operators of all ranks up to \p K
+/// @param K the maximum particle rank of included cluster operators
+/// @param skip1 if true, omit 1-body cluster `T_(1)`
+/// @return sum of `T_(k)` with `k<=K`
+ExprPtr T(std::size_t K, bool skip1 = false);
 
-/// makes particle-conserving deexcitation operator of rank \p K
+/// makes ref-state left-hand eigenoperator of the CC Hamiltonian up to rank \p
+/// K
+/// @param K the particle rank
+/// @return \f$ \frac{1}{(K!)^2}\sum \lambda_{i_1 \dots i_K}^{a_1 \dots a_K}
+/// a^{i_1 \dots i_K}_{a_1 \dots a_K} \f$
 ExprPtr Λ_(std::size_t K);
 
-/// makes sum of particle-conserving deexcitation operators of all ranks up to
-/// \p
-/// K
-ExprPtr Λ(std::size_t K);
+/// makes sum of Λ_() operators of all ranks up to \p K
+/// @param K the maximum particle rank of included cluster operators
+/// @param skip1 if true, omit 1-body cluster `Λ_(1)`
+/// @return sum of `Λ_(k)` with `k<=K`
+ExprPtr Λ(std::size_t K, bool skip1 = false);
 
 /// makes generic bra/ket-antisymmetric excitation (if \p K > 0) or
 /// deexcitation (if \p K < 0) operator of rank `|K|`
@@ -273,6 +284,30 @@ ExprPtr S(std::int64_t K);
 /// if using spin-free basis the manifold is particle-symmetric (@sa S(K)),
 /// else it is bra/ket-antisymmetric (@sa A(K))
 ExprPtr P(std::int64_t K);
+
+/// Hamiltonian perturbation of rank \param R and order \p o
+/// @pre `order==1`, only first order perturbation is supported now
+ExprPtr H_pt(std::size_t order, std::size_t R);
+
+/// perturbed cluster operator of rank \p K and order \p o
+/// @pre `order==1`, only first order perturbation is supported now
+ExprPtr T_pt_(std::size_t order, std::size_t K);
+
+/// makes sum of perturbed excitation operators of all ranks up to \p K and
+/// order \p o
+/// @param skip1 if true, omit 1-body cluster `T_pt_(1)`
+/// @pre `order==1`, only first order perturbation is supported now
+ExprPtr T_pt(std::size_t order, std::size_t K, bool skip1 = false);
+
+/// perturbed deexcitation operator of rank \p K and order \p o
+/// @pre `order==1`, only first order perturbation is supported now
+ExprPtr Λ_pt_(std::size_t order, std::size_t K);
+
+/// makes sum of perturbed deexcitation operators of all ranks up to \p K and
+/// order \p o
+/// @param skip1 if true, omit 1-body cluster `T_pt_(1)`
+/// @pre `order==1`, only first order perturbation is supported now
+ExprPtr Λ_pt(std::size_t order, std::size_t K, bool skip1 = false);
 
 /// @}
 
@@ -296,19 +331,7 @@ bool lowers_rank_to_vacuum(const ExprPtr& op_or_op_product,
 bool lowers_rank_or_lower_to_vacuum(const ExprPtr& op_or_op_product,
                                     const unsigned long k);
 
-/// computes the vacuum expectation value (VEV)
-
-/// @param[in] expr input expression
-/// @param[in] op_connections list of pairs of labels of operators to be
-/// connected (e.g., `{{"h", "t"}}` will ensure that each operator with
-/// label `"h"` will be connected to at least one operator with label `"t"`;
-/// the default is `{{L"h", L"t"}, {L"f", L"t"}, {L"g", L"t"}}`
-/// @param[in] skip_clone if true, will not clone the input expression
-/// @return the VEV
-ExprPtr vac_av(ExprPtr expr,
-               std::vector<std::pair<std::wstring, std::wstring>>
-                   op_connections = {{L"h", L"t"}, {L"f", L"t"}, {L"g", L"t"}},
-               bool skip_clone = false);
+#include "SeQuant/domain/mbpt/vac_av.hpp"
 
 }  // namespace op
 

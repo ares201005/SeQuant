@@ -45,6 +45,9 @@ enum class OpType {
   RDM,  //!< RDM
   RDMCumulant,  //!< RDM cumulant
   δ,            //!< Kronecker delta (=identity) operator
+  h_1,          //!< Hamiltonian perturbation
+  t_1,          //!< first order perturbed excitation cluster amplitudes
+  λ_1,          //!< first order perturbed deexcitation cluster amplitudes
   invalid       //!< invalid operator
 };
 
@@ -70,7 +73,10 @@ inline const std::map<OpType, std::wstring> optype2label{
     {OpType::RDM, L"γ"},
     // see https://en.wikipedia.org/wiki/Cumulant
     {OpType::RDMCumulant, L"κ"},
-    {OpType::δ, L"δ"}};
+    {OpType::δ, L"δ"},
+    {OpType::h_1, L"h¹"},
+    {OpType::t_1, L"t¹"},
+    {OpType::λ_1, L"λ¹"}};
 
 /// maps operator labels to their types
 inline const std::map<std::wstring, OpType> label2optype =
@@ -452,8 +458,7 @@ class OpMaker {
     const auto dep_ket = dep == UseDepIdx::Ket;
 
     // not sure what it means to use nonsymmetric operator if nbra != nket
-    using ranges::size;
-    if (!symm) assert(size(bras) == size(kets));
+    if (!symm) assert(ranges::size(bras) == ranges::size(kets));
 
     auto make_idx_vector = [](const auto& spacetypes) {
       std::vector<Index> result;
@@ -489,6 +494,7 @@ class OpMaker {
       ketidxs = make_idx_vector(kets);
     }
 
+    using ranges::size;
     const auto mult = symm ? factorial(size(bras)) * factorial(size(kets))
                            : factorial(size(bras));
     const auto opsymm = symm ? (S == Statistics::FermiDirac ? Symmetry::antisymm
@@ -689,6 +695,7 @@ class Operator : public Operator<void, S> {
   Operator(std::function<std::wstring_view()> label_generator,
            std::function<ExprPtr()> tensor_form_generator,
            std::function<void(QuantumNumbers&)> qn_action);
+
   virtual ~Operator();
 
   /// evaluates the result of applying this operator to \p qns
@@ -719,6 +726,8 @@ class Operator : public Operator<void, S> {
   bool commutes_with_atom(const Expr& that) const override;
 
   void adjoint() override;
+
+  bool is_adjoint_ = false;
 
  private:
   std::function<void(QuantumNumbers&)> qn_action_;

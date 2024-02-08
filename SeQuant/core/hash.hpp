@@ -6,9 +6,10 @@
 #define SEQUANT_HASH_HPP
 
 #ifdef SEQUANT_USE_SYSTEM_BOOST_HASH
+#include <boost/version.hpp>
+#define SEQUANT_BOOST_VERSION BOOST_VERSION
 #include <boost/container_hash/hash.hpp>
 namespace sequant_boost = boost;
-#define SEQUANT_BOOST_VERSION BOOST_VERSION
 #else
 #include <SeQuant/external/boost/container_hash/hash.hpp>
 #endif
@@ -191,7 +192,7 @@ std::size_t hash_range(It begin, It end) {
       seed = begin->hash_value();
     else {
       using sequant_boost::hash_value;
-      std::size_t seed = hash_value(*begin);
+      [[maybe_unused]] std::size_t seed = hash_value(*begin);
     }
     sequant_boost::hash_range(seed, begin + 1, end);
     return seed;

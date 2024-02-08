@@ -10,6 +10,7 @@
 namespace sequant::mbpt {
 
 std::vector<std::wstring> cardinal_tensor_labels() {
+<<<<<<< HEAD
   return {L"κ",
           L"γ",
           L"Γ",
@@ -41,6 +42,23 @@ std::vector<std::wstring> cardinal_tensor_labels() {
           L"ã",
           L"b",
           L"b̃",
+=======
+  return {L"κ",  L"γ",
+          L"Γ",  L"A",
+          L"S",  L"P",
+          L"L",  L"λ",
+          L"λ¹", L"h",
+          L"f",  L"f̃",
+          L"g",  L"t",
+          L"t¹", L"R",
+          L"F",  L"X",
+          L"μ",  L"V",
+          L"Ṽ",  L"B",
+          L"U",  L"GR",
+          L"C",  overlap_label(),
+          L"a",  L"ã",
+          L"b",  L"b̃",
+>>>>>>> master
           L"E"};
 }
 
@@ -65,6 +83,7 @@ OpClass to_class(OpType op) {
     case OpType::δ:
     case OpType::A:
     case OpType::S:
+    case OpType::h_1:
       return OpClass::gen;
     case OpType::Q:
       return OpClass::disp;
@@ -73,9 +92,11 @@ OpClass to_class(OpType op) {
     case OpType::t:
     case OpType::R:
     case OpType::R12:
+    case OpType::t_1:
       return OpClass::ex;
     case OpType::λ:
     case OpType::L:
+    case OpType::λ_1:
       return OpClass::deex;
     default:
       throw std::invalid_argument("to_class(OpType op): invalid op");
@@ -132,9 +153,13 @@ template <Statistics S>
 std::wstring to_latex(const mbpt::Operator<mbpt::qns_t, S>& op) {
   using namespace sequant::mbpt;
 
-  auto lbl = utf_to_latex(op.label());
-  std::wstring result = L"{\\hat{" + lbl + L"}";
-  auto it = label2optype.find(lbl);
+  auto result = L"{\\hat{" + utf_to_latex(op.label()) + L"}";
+
+  // check if operator has adjoint label, remove if present for base label
+  auto base_lbl = sequant::to_wstring(op.label());
+  if (base_lbl.back() == adjoint_label) base_lbl.pop_back();
+
+  auto it = label2optype.find(base_lbl);
   if (it != label2optype.end()) {  // handle special cases
     const auto optype = it->second;
     if (to_class(optype) == OpClass::gen) {
@@ -182,8 +207,6 @@ OpMaker<S>::OpMaker(OpType op) : op_(op) {}
 template <Statistics S>
 ExprPtr OpMaker<S>::operator()(std::optional<UseDepIdx> dep,
                                std::optional<Symmetry> opsymm_opt) const {
-  bool dep_bra = false;
-  bool dep_ket = false;
   // if not given dep, use mbpt::Context::CSV to determine whether to use
   // dependent indices for pure (de)excitation ops
   if (!dep && get_default_formalism().csv() == mbpt::CSV::Yes) {
