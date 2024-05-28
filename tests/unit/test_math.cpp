@@ -2,14 +2,22 @@
 // Created by Eduard Valeyev on 5/18/23.
 //
 
-#include "catch.hpp"
+#include <catch2/catch_test_macros.hpp>
 
+#include <SeQuant/core/math.hpp>
+#include <SeQuant/core/meta.hpp>
+#include <SeQuant/core/rational.hpp>
+#include <SeQuant/core/runtime.hpp>
+#include <SeQuant/core/wstring.hpp>
+
+#include <cmath>
 #include <iostream>
+#include <new>
+#include <stdexcept>
+#include <string>
+#include <utility>
 
-#include "SeQuant/core/math.hpp"
-#include "SeQuant/core/rational.hpp"
-#include "SeQuant/core/runtime.hpp"
-#include "SeQuant/core/wstring.hpp"
+#include <range/v3/all.hpp>
 
 TEST_CASE("Rational", "[elements]") {
   using namespace sequant;

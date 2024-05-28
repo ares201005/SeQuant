@@ -5,15 +5,26 @@
 #ifndef SEQUANT_DOMAIN_MBPT_MR_HPP
 #define SEQUANT_DOMAIN_MBPT_MR_HPP
 
-#include "SeQuant/domain/mbpt/fwd.hpp"
+#include <SeQuant/domain/mbpt/op.hpp>
 
-#include "SeQuant/core/context.hpp"
-#include "SeQuant/core/expr_fwd.hpp"
-#include "SeQuant/core/space.hpp"
-#include "SeQuant/domain/mbpt/op.hpp"
+#include <SeQuant/core/attr.hpp>
+#include <SeQuant/core/expr.hpp>
+#include <SeQuant/core/hash.hpp>
+#include <SeQuant/core/interval.hpp>
+#include <SeQuant/core/latex.hpp>
+#include <SeQuant/core/space.hpp>
 
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <initializer_list>
+#include <iterator>
 #include <limits>
+#include <string>
+#include <string_view>
 #include <utility>
+#include <vector>
 
 namespace sequant {
 namespace mbpt {
@@ -142,13 +153,23 @@ class OpMaker : public mbpt::OpMaker<Statistics::FermiDirac> {
   OpMaker(OpType op, std::size_t nbra,
           std::size_t nket = std::numeric_limits<std::size_t>::max());
 
+  // clang-format off
+  /// Generic constructor for arbitrary cre/ann spaces
+  /// @param[in] op the operator type (is not considered for assigning the cre/ann spaces, but used to assign CSV index dependencies, if needed)
+  /// @param[in] cre_spaces spaces of creators
+  /// @param[in] ann_spaces spaces of annihilators
+  // clang-format off
+  OpMaker(OpType op, const container::svector<IndexSpace::Type>& cre_spaces, const container::svector<IndexSpace::Type>& ann_spaces);
+
   using base_type::operator();
 };
 
-#include "../mbpt/mr/op.impl.hpp"
+#include <SeQuant/domain/mbpt/mr/op.impl.hpp>
 
 /// @name tensor-level operators
 /// @{
+
+ExprPtr T_act_(std::size_t K);
 
 // clang-format off
 /// @brief `k`-body contribution to the "generic" Hamiltonian (in normal order relative to the default vacuum)
@@ -183,6 +204,10 @@ ExprPtr vac_av(ExprPtr expr,
 // these produce operator-level expressions
 namespace op {
 
+/// @name MR MBPT operators
+
+/// @{
+
 // clang-format off
 /// @brief `k`-body contribution to the "generic" Hamiltonian (in normal order relative to the default vacuum)
 /// @param[in] k the rank of the particle interactions; only `k<=2` is
@@ -198,6 +223,9 @@ ExprPtr H(std::size_t k = 2);
 /// makes particle-conserving excitation operator of rank \p K
 ExprPtr T_(std::size_t K);
 
+/// makes particle-conserving active replacement operator of rank \p K
+ExprPtr T_act_(std::size_t K);
+
 /// makes sum of particle-conserving excitation operators of all ranks up to \p
 /// K
 ExprPtr T(std::size_t K);
@@ -209,7 +237,14 @@ ExprPtr Λ_(std::size_t K);
 /// \p K
 ExprPtr Λ(std::size_t K);
 
-#include "SeQuant/domain/mbpt/vac_av.hpp"
+/// @}
+
+/// @return true if \p op_or_op_product can change quantum numbers from \p
+/// source_qns to \p target_qns
+bool can_change_qns(const ExprPtr& op_or_op_product, const qns_t target_qns,
+                    const qns_t source_qns = {});
+
+#include <SeQuant/domain/mbpt/vac_av.hpp>
 
 }  // namespace op
 

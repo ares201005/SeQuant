@@ -1,12 +1,25 @@
-#include "catch.hpp"
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <SeQuant/core/attr.hpp>
+#include <SeQuant/core/complex.hpp>
+#include <SeQuant/core/expr.hpp>
+#include <SeQuant/core/index.hpp>
 #include <SeQuant/core/parse_expr.hpp>
+#include <SeQuant/core/rational.hpp>
 #include <SeQuant/core/tensor.hpp>
 
 #include <algorithm>
+#include <cstddef>
 #include <locale>
+#include <memory>
 #include <sstream>
 #include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
+
+#include <range/v3/all.hpp>
 
 namespace Catch {
 template <>
@@ -19,7 +32,7 @@ struct StringMaker<sequant::ParseError> {
 };
 }  // namespace Catch
 
-struct ParseErrorMatcher : Catch::MatcherBase<sequant::ParseError> {
+struct ParseErrorMatcher : Catch::Matchers::MatcherBase<sequant::ParseError> {
   std::size_t offset;
   std::size_t length;
   std::string messageFragment;

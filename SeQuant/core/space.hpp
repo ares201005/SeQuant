@@ -5,11 +5,17 @@
 #ifndef SEQUANT_SPACE_H
 #define SEQUANT_SPACE_H
 
-#include <bitset>
 #include <cassert>
+#include <codecvt>
+#include <cstdint>
+#include <cstdlib>
+#include <locale>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <utility>
 
-#include "attr.hpp"
-#include "container.hpp"
+#include <SeQuant/core/container.hpp>
 
 #include <range/v3/algorithm/any_of.hpp>
 
@@ -80,6 +86,9 @@ struct QuantumNumbersAttr {
   constexpr QuantumNumbersAttr unIon(QuantumNumbersAttr other) const {
     return QuantumNumbersAttr(this->to_int32() | other.to_int32());
   }
+  constexpr QuantumNumbersAttr operator~() const {
+    return QuantumNumbersAttr(~this->to_int32());
+  }
 
   friend constexpr bool operator==(QuantumNumbersAttr lhs,
                                    QuantumNumbersAttr rhs) {
@@ -104,6 +113,9 @@ struct QuantumNumbersAttr {
     return QuantumNumbersAttr(-0);
   }
 };
+
+std::wstring to_wstring(TypeAttr type);
+std::wstring to_wstring(QuantumNumbersAttr qns);
 
 /// @brief space of Index objects
 ///
@@ -287,6 +299,7 @@ class IndexSpace {
   /// @}
 
   /// \name standard quantum numbers tags
+  /// \note spin quantum number takes 2 rightmost bits
   /// @{
   /// no quantum numbers
   constexpr static QuantumNumbers nullqns{0b000000};
@@ -294,6 +307,8 @@ class IndexSpace {
   constexpr static QuantumNumbers alpha{0b000001};
   /// spin-down
   constexpr static QuantumNumbers beta{0b000010};
+  /// spin mask
+  constexpr static QuantumNumbers spinmask{0b000011};
 
   /// list of all standard quantum numbers
   static constexpr QuantumNumbers standard_qns[] = {nullqns, alpha, beta};
@@ -310,6 +325,7 @@ class IndexSpace {
   };
   struct bad_attr : std::invalid_argument {
     bad_attr() : std::invalid_argument("bad attribute") {}
+    using std::invalid_argument::invalid_argument;
   };
 
   struct KeyCompare {
@@ -348,7 +364,12 @@ class IndexSpace {
     const auto attr = Attr(type, qns);
     assert(attr.is_valid());
     if (attr == Attr::null()) return null_instance();
-    if (!instance_exists(attr)) throw bad_attr();
+    if (!instance_exists(attr)) {
+      std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+      throw bad_attr(converter.to_bytes(L"Request to non-registered space: " +
+                                        sequant::to_wstring(type) + L" " +
+                                        sequant::to_wstring(qns)));
+    }
     return instances_.find(attr)->second;
   }
 

@@ -1,9 +1,13 @@
-#include "catch.hpp"
+#include <catch2/catch_test_macros.hpp>
 
 #include <SeQuant/core/binary_node.hpp>
+
 #include <array>
-#include <range/v3/view.hpp>
+#include <cstddef>
 #include <string>
+#include <utility>
+
+#include <range/v3/all.hpp>
 
 TEST_CASE("TEST BINARY_NODE", "[FullBinaryNode]") {
   using ranges::views::iota;

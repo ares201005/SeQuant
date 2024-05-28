@@ -92,6 +92,11 @@ set(SEQUANT_INSTALL_DOCDIR "${SEQUANT_INSTALL_SHAREDIR}/doc"
 set(SEQUANT_INSTALL_CMAKEDIR "lib/cmake/sequant"
         CACHE PATH "SeQuant CMAKE install directory")
 
+############################
+# Additional build variables
+############################
+option(SEQUANT_IWYU "Whether to use the include-what-you-use tool (if found)" OFF)
+
 ##########################
 # SeQuant package options
 ##########################
@@ -141,6 +146,9 @@ include(FindOrFetchRangeV3)
 # Boost will be added after defining SeQuant
 include(external/boost.cmake)
 
+# LibPerm
+include(FindOrFetchLibPerm)
+
 # embedded bliss-0.73
 add_library(SeQuant-bliss
         SeQuant/external/bliss/defs.cc
@@ -182,6 +190,8 @@ set(SeQuant_src
         SeQuant/core/eval_expr.cpp
         SeQuant/core/eval_expr.hpp
         SeQuant/core/eval_node.hpp
+        SeQuant/core/export/itf.cpp
+        SeQuant/core/export/itf.hpp
         SeQuant/core/expr.cpp
         SeQuant/core/expr.hpp
         SeQuant/core/expr_algorithm.hpp
@@ -219,6 +229,7 @@ set(SeQuant_src
         SeQuant/core/tensor_network.hpp
         SeQuant/core/timer.hpp
         SeQuant/core/utility/context.hpp
+        SeQuant/core/utility/indices.hpp
         SeQuant/core/utility/macros.hpp
         SeQuant/core/utility/nodiscard.hpp
         SeQuant/core/utility/singleton.hpp
@@ -369,10 +380,26 @@ if (Boost_BUILT_FROM_SOURCE AND TARGET build-boost-in-SeQuant)
     add_dependencies(SeQuant build-boost-in-SeQuant)
 endif()
 
+if (SEQUANT_IWYU)
+	find_program(iwyu_path NAMES include-what-you-use iwyu)
+
+	if (iwyu_path)
+		set(iwyu_options_and_path
+			"${iwyu_path}"
+			-Xiwyu --cxx17ns
+			-Xiwyu --no_comments
+		)
+		set_property(TARGET SeQuant PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${iwyu_options_and_path})
+	endif()
+endif()
+
 ### unit tests
 include(CTest)
 
 if (BUILD_TESTING)
+
+    # need catch2
+    include(FindOrFetchCatch2)
 
     set(utests_src
             tests/unit/test_space.cpp
@@ -400,6 +427,8 @@ if (BUILD_TESTING)
             tests/unit/test_math.cpp
             tests/unit/test_string.cpp
             tests/unit/test_latex.cpp
+            tests/unit/test_utilities.cpp
+            tests/unit/test_export.cpp
             )
 
     if (TARGET tiledarray)
@@ -412,12 +441,11 @@ if (BUILD_TESTING)
                 tests/unit/test_eval_btas.cpp tests/unit/test_eval_ta.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
     endif (TARGET tiledarray)
 
-    set(utests_deps SeQuant)
+    set(utests_deps SeQuant Catch2::Catch2)
 
     set(unit_test_executable unit_tests-sequant)
     add_executable(${unit_test_executable} EXCLUDE_FROM_ALL
             tests/unit/test_main.cpp
-            tests/unit/catch.hpp
             tests/unit/test_config.hpp
             ${utests_src})
     target_link_libraries(${unit_test_executable} ${utests_deps})
@@ -447,7 +475,7 @@ if (BUILD_TESTING)
     add_executable(${example0} EXCLUDE_FROM_ALL
             examples/${example0}/${example0}.cpp)
     target_link_libraries(${example0} SeQuant)
-    set(${example0}_cmdline_args ";3 t std so;3 t csv so;3 lambda std so;3 lambda csv so;2 t std sf;;2 lambda std sf")
+    set(${example0}_cmdline_args ";3 t std so;3 t csv so;3 lambda std so;3 lambda csv so;2 t std sf;2 t csv sf;2 lambda std sf;2 lambda csv sf")
 
     if (TARGET Eigen3::Eigen)  # these examples require Eigen for full functionality
       # Single-Reference closed-shell Coupled-Cluster equation

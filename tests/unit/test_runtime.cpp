@@ -2,11 +2,10 @@
 // Created by Eduard Valeyev on 10/12/22.
 //
 
-#include <iostream>
+#include <catch2/catch_test_macros.hpp>
 
-#include "catch.hpp"
-
-#include "SeQuant/core/context.hpp"
+#include <SeQuant/core/attr.hpp>
+#include <SeQuant/core/context.hpp>
 
 TEST_CASE("Context", "[runtime]") {
   using namespace sequant;

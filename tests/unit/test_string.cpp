@@ -2,9 +2,12 @@
 // Created by Eduard Valeyev on 7/19/23.
 //
 
-#include "catch.hpp"
+#include <catch2/catch_test_macros.hpp>
 
-#include "SeQuant/core/wstring.hpp"
+#include <SeQuant/core/wstring.hpp>
+
+#include <memory>
+#include <type_traits>
 
 TEST_CASE("string", "[util]") {
   using namespace sequant;

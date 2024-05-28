@@ -2,14 +2,41 @@
 // Created by Eduard Valeyev on 2019-02-19.
 //
 
-#include "SeQuant/domain/mbpt/mr.hpp"
+#include <SeQuant/domain/mbpt/fwd.hpp>
 
-#include "SeQuant/core/expr.hpp"
-#include "SeQuant/core/math.hpp"
-#include "SeQuant/core/op.hpp"
-#include "SeQuant/core/tensor.hpp"
-#include "SeQuant/core/wick.hpp"
-#include "SeQuant/domain/mbpt/context.hpp"
+#include <SeQuant/domain/mbpt/mr.hpp>
+
+#include <SeQuant/core/abstract_tensor.hpp>
+#include <SeQuant/core/container.hpp>
+#include <SeQuant/core/context.hpp>
+#include <SeQuant/core/expr.hpp>
+#include <SeQuant/core/expr_fwd.hpp>
+#include <SeQuant/core/index.hpp>
+#include <SeQuant/core/logger.hpp>
+#include <SeQuant/core/op.hpp>
+#include <SeQuant/core/tensor.hpp>
+#include <SeQuant/core/wick.hpp>
+
+#include <range/v3/algorithm/for_each.hpp>
+#include <range/v3/functional/identity.hpp>
+#include <range/v3/iterator/basic_iterator.hpp>
+#include <range/v3/iterator/reverse_iterator.hpp>
+#include <range/v3/range/conversion.hpp>
+#include <range/v3/view/filter.hpp>
+#include <range/v3/view/map.hpp>
+#include <range/v3/view/reverse.hpp>
+#include <range/v3/view/transform.hpp>
+#include <range/v3/view/view.hpp>
+
+#include <algorithm>
+#include <atomic>
+#include <cassert>
+#include <cstdlib>
+#include <iostream>
+#include <map>
+#include <memory>
+#include <set>
+#include <stdexcept>
 
 namespace sequant {
 namespace mbpt {
@@ -87,12 +114,15 @@ qninterval_t nann_uocc(qns_t qns) {
 qninterval_t nann(qns_t qns) { return qns[1] + qns[3] + qns[5]; }
 
 qns_t combine(qns_t a, qns_t b) {
+  // particle contractions (i.e. above Fermi level; N.B. active are above
+  // closed-shell Fermi level)
   const auto ncontr_uocc =
       qninterval_t{0, std::min(ncre(b, IndexSpace::active_unoccupied).upper(),
                                nann(a, IndexSpace::active_unoccupied).upper())};
   const auto ncontr_act =
-      qninterval_t{0, std::min(nann(b, IndexSpace::active).upper(),
-                               ncre(a, IndexSpace::active).upper())};
+      qninterval_t{0, std::min(ncre(b, IndexSpace::active).upper(),
+                               nann(a, IndexSpace::active).upper())};
+  // hole contractions (i.e. below Fermi level)
   const auto ncontr_occ =
       qninterval_t{0, std::min(nann(b, IndexSpace::active_occupied).upper(),
                                ncre(a, IndexSpace::active_occupied).upper())};
@@ -153,7 +183,21 @@ OpMaker::OpMaker(OpType op, std::size_t nbra, std::size_t nket)
   }
 }
 
-#include "../mbpt/mr/op.impl.cpp"
+OpMaker::OpMaker(OpType op,
+                 const container::svector<IndexSpace::Type>& cre_spaces,
+                 const container::svector<IndexSpace::Type>& ann_spaces)
+    : base_type(op) {
+  bra_spaces_ = cre_spaces;
+  ket_spaces_ = ann_spaces;
+}
+
+#include <SeQuant/domain/mbpt/mr/op.impl.cpp>
+
+ExprPtr T_act_(std::size_t K) {
+  return OpMaker(OpType::t,
+                 container::svector<IndexSpace::Type>(K, IndexSpace::active),
+                 container::svector<IndexSpace::Type>(K, IndexSpace::active))();
+}
 
 ExprPtr H_(std::size_t k) {
   assert(k > 0 && k <= 2);
@@ -500,6 +544,22 @@ ExprPtr T_(std::size_t K) {
       });
 }
 
+ExprPtr T_act_(std::size_t K) {
+  assert(K > 0);
+  return ex<op_t>(
+      []() -> std::wstring_view { return optype2label.at(OpType::t); },
+      [=]() -> ExprPtr {
+        using namespace sequant::mbpt::sr;
+        return mr::T_act_(K);
+      },
+      [=](qnc_t& qns) {
+        qns = combine(
+            qnc_t{
+                {0ul, 0ul}, {0ul, 0ul}, {K, K}, {K, K}, {0ul, 0ul}, {0ul, 0ul}},
+            qns);
+      });
+}
+
 ExprPtr T(std::size_t K) {
   assert(K > 0);
 
@@ -591,7 +651,7 @@ ExprPtr A(std::int64_t K) {
 // }
 
 bool can_change_qns(const ExprPtr& op_or_op_product, const qns_t target_qns,
-                    const qns_t source_qns = {}) {
+                    const qns_t source_qns) {
   qns_t qns = source_qns;
   if (op_or_op_product.is<Product>()) {
     const auto& op_product = op_or_op_product.as<Product>();
@@ -613,7 +673,7 @@ bool can_change_qns(const ExprPtr& op_or_op_product, const qns_t target_qns,
 
 using mbpt::mr::vac_av;
 
-#include "SeQuant/domain/mbpt/vac_av.ipp"
+#include <SeQuant/domain/mbpt/vac_av.ipp>
 
 }  // namespace op
 
@@ -695,7 +755,7 @@ std::wstring to_latex(const mbpt::Operator<mbpt::mr::qns_t, S>& op) {
 
 }  // namespace sequant
 
-#include "SeQuant/domain/mbpt/op.ipp"
+#include <SeQuant/domain/mbpt/op.ipp>
 
 namespace sequant {
 namespace mbpt {

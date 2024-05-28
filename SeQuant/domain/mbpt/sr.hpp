@@ -5,13 +5,26 @@
 #ifndef SEQUANT_DOMAIN_MBPT_SR_HPP
 #define SEQUANT_DOMAIN_MBPT_SR_HPP
 
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <initializer_list>
+#include <iterator>
 #include <limits>
+#include <string>
+#include <string_view>
 #include <utility>
+#include <vector>
 
-#include "SeQuant/core/context.hpp"
-#include "SeQuant/core/expr_fwd.hpp"
-#include "SeQuant/core/space.hpp"
-#include "SeQuant/domain/mbpt/op.hpp"
+#include <SeQuant/core/attr.hpp>
+#include <SeQuant/core/expr.hpp>
+#include <SeQuant/core/hash.hpp>
+#include <SeQuant/core/interval.hpp>
+#include <SeQuant/core/latex.hpp>
+#include <SeQuant/core/space.hpp>
+#include <SeQuant/domain/mbpt/op.hpp>
 
 namespace sequant {
 namespace mbpt {
@@ -133,7 +146,6 @@ class OpMaker : public mbpt::OpMaker<Statistics::FermiDirac> {
   using base_type::operator();
 };
 
-
 class BOpMaker : public mbpt::OpMaker<Statistics::BoseEinstein> {
  public:
   using base_type = mbpt::OpMaker<Statistics::BoseEinstein>;
@@ -178,8 +190,7 @@ class FBOpMaker : public mbpt::FBOpMaker {
 };
 
 
-
-#include "../mbpt/sr/op.impl.hpp"
+#include <SeQuant/domain/mbpt/sr/op.impl.hpp>
 
 /// @name tensor-level SR MBPT operators
 /// @{
@@ -311,6 +322,11 @@ ExprPtr Λ_pt(std::size_t order, std::size_t K, bool skip1 = false);
 
 /// @}
 
+/// @return true if \p op_or_op_product can change quantum numbers from \p
+/// source_qns to \p target_qns
+bool can_change_qns(const ExprPtr& op_or_op_product, const qns_t target_qns,
+                    const qns_t source_qns = {});
+
 /// @return true if \p op_or_op_product can produce determinant of excitation
 /// rank \p k when applied to reference
 bool raises_vacuum_to_rank(const ExprPtr& op_or_op_product,
@@ -331,7 +347,7 @@ bool lowers_rank_to_vacuum(const ExprPtr& op_or_op_product,
 bool lowers_rank_or_lower_to_vacuum(const ExprPtr& op_or_op_product,
                                     const unsigned long k);
 
-#include "SeQuant/domain/mbpt/vac_av.hpp"
+#include <SeQuant/domain/mbpt/vac_av.hpp>
 
 }  // namespace op
 

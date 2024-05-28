@@ -2,9 +2,13 @@
 // Created by Eduard Valeyev on 7/19/23.
 //
 
-#include "catch.hpp"
+#include <catch2/catch_test_macros.hpp>
 
-#include "SeQuant/core/latex.hpp"
+#include <SeQuant/core/latex.hpp>
+#include <SeQuant/core/meta.hpp>
+
+#include <stdexcept>
+#include <string>
 
 TEST_CASE("latex", "[util]") {
   using namespace sequant;

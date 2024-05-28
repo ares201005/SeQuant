@@ -1,5 +1,16 @@
-#include "asy_cost.hpp"
+#include <SeQuant/core/asy_cost.hpp>
+#include <SeQuant/core/container.hpp>
+#include <SeQuant/core/meta.hpp>
+#include <SeQuant/core/rational.hpp>
+#include <SeQuant/core/wstring.hpp>
+
 #include <boost/numeric/conversion/cast.hpp>
+
+#include <cmath>
+#include <limits>
+
+#include <range/v3/iterator.hpp>
+#include <range/v3/view.hpp>
 
 namespace sequant {
 
@@ -144,12 +155,12 @@ AsyCost const &AsyCost::zero() {
   return zero;
 }
 
-AsyCost& AsyCost::operator+=(AsyCost const& other) {
+AsyCost &AsyCost::operator+=(AsyCost const &other) {
   *this = *this + other;
   return *this;
 }
 
-AsyCost& AsyCost::operator-=(AsyCost const& other) {
+AsyCost &AsyCost::operator-=(AsyCost const &other) {
   *this = *this - other;
   return *this;
 }
@@ -215,11 +226,11 @@ bool operator>(AsyCost const &lhs, AsyCost const &rhs) {
   return !(lhs < rhs || lhs == rhs);
 }
 
-bool operator<=(AsyCost const& lhs, AsyCost const& rhs) {
+bool operator<=(AsyCost const &lhs, AsyCost const &rhs) {
   return lhs < rhs || lhs == rhs;
 }
 
-bool operator>=(AsyCost const& lhs, AsyCost const& rhs) {
+bool operator>=(AsyCost const &lhs, AsyCost const &rhs) {
   return lhs > rhs || lhs == rhs;
 }
 

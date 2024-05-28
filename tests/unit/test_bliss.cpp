@@ -2,14 +2,14 @@
 // Created by Eduard Valeyev on 2/26/19.
 //
 
-#include "catch.hpp"
+#include <catch2/catch_test_macros.hpp>
 
-#include "SeQuant/external/bliss/graph.hh"
-#include "SeQuant/external/bliss/utils.hh"
+#include <SeQuant/external/bliss/graph.hh>
+#include <SeQuant/external/bliss/utils.hh>
 
+#include <cassert>
 #include <cstdio>
-#include <iostream>
-#include <numeric>
+#include <initializer_list>
 #include <vector>
 
 constexpr const bool use_colors = true;
