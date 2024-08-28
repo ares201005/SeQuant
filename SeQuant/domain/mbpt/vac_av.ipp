@@ -84,17 +84,11 @@ ExprPtr vac_av(
     }
 
     // lower to tensor form
-    auto lower_to_tensor_form = [](ExprPtr& expr) {
-      auto op_lowerer = [](ExprPtr& leaf) {
-        if (leaf.is<op_t>()) leaf = leaf.as<op_t>().tensor_form();
-      };
-      expr->visit(op_lowerer, /* atoms only = */ true);
-    };
     lower_to_tensor_form(product);
-    expr = simplify(product);
+    simplify(product);
 
     // compute VEV
-    auto vev = vac_av(product, connections, /* use_topology = */ true);
+    auto vev = tensor::vac_av(product, connections, /* use_topology = */ true);
     // restore Variable types to the Product
     if (!variables.empty())
       ranges::for_each(variables, [&vev](const auto& var) { vev *= var; });
@@ -131,7 +125,7 @@ ExprPtr vac_av(
     return expr;  // vacuum is normalized
   }
   throw std::invalid_argument(
-      "mpbt::*::op::vac_av(expr): unknown expression type");
+      "mpbt::*::vac_av(expr): unknown expression type");
 }
 
 ExprPtr vac_av(

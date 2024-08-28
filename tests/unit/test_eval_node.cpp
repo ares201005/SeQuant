@@ -7,7 +7,7 @@
 #include <SeQuant/core/eval_expr.hpp>
 #include <SeQuant/core/eval_node.hpp>
 #include <SeQuant/core/expr.hpp>
-#include <SeQuant/core/parse_expr.hpp>
+#include <SeQuant/core/parse.hpp>
 #include <SeQuant/core/rational.hpp>
 
 #include <cassert>
@@ -20,6 +20,7 @@
 
 #include <range/v3/all.hpp>
 
+#include <SeQuant/domain/mbpt/convention.hpp>
 namespace {
 
 // validates if x is constructible from tspec using parse_expr

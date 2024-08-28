@@ -1,9 +1,20 @@
 cmake_minimum_required(VERSION 3.15.0) # need list(PREPEND for toolchains
 
+# Preload versions/tags of all dependencies ====================================
+include(external/versions.cmake)
+
+###############################################################################
+# CMake defaults to address key pain points
+###############################################################################
+
+# safety net for dev workflow: accidental install will not affect FindOrFetch*
+if (NOT DEFINED CACHE{CMAKE_FIND_NO_INSTALL_PREFIX})
+    set(CMAKE_FIND_NO_INSTALL_PREFIX ON CACHE BOOL "Whether find_* commands will search CMAKE_INSTALL_PREFIX and CMAKE_STAGING_PREFIX; see https://cmake.org/cmake/help/latest/variable/CMAKE_FIND_NO_INSTALL_PREFIX.html#variable:CMAKE_FIND_NO_INSTALL_PREFIX")
+endif()
+
 ###############################################################################
 # Bring ValeevGroup cmake toolkit
 ###############################################################################
-include(external/versions.cmake)
 include(FetchContent)
 if (DEFINED PROJECT_BINARY_DIR)
     set(VG_CMAKE_KIT_PREFIX_DIR PROJECT_BINARY_DIR)
@@ -200,6 +211,7 @@ set(SeQuant_src
         SeQuant/core/hugenholtz.hpp
         SeQuant/core/index.cpp
         SeQuant/core/index.hpp
+        SeQuant/core/index_space_registry.hpp
         SeQuant/core/interval.hpp
         SeQuant/core/latex.cpp
         SeQuant/core/latex.ipp
@@ -215,12 +227,11 @@ set(SeQuant_src
         SeQuant/core/optimize/optimize.cpp
         SeQuant/core/parse/deparse.cpp
         SeQuant/core/parse/parse.cpp
-        SeQuant/core/parse_expr.hpp
+        SeQuant/core/parse.hpp
         SeQuant/core/ranges.hpp
         SeQuant/core/rational.hpp
         SeQuant/core/runtime.cpp
         SeQuant/core/runtime.hpp
-        SeQuant/core/space.cpp
         SeQuant/core/space.hpp
         SeQuant/core/tag.hpp
         SeQuant/core/tensor.cpp
@@ -244,8 +255,6 @@ set(SeQuant_src
         SeQuant/domain/mbpt/context.cpp
         SeQuant/domain/mbpt/convention.cpp
         SeQuant/domain/mbpt/convention.hpp
-        SeQuant/domain/mbpt/mr.cpp
-        SeQuant/domain/mbpt/mr.hpp
         SeQuant/domain/mbpt/models/cc.cpp
         SeQuant/domain/mbpt/models/cc.hpp
         SeQuant/domain/mbpt/models/qedcc.cpp
@@ -256,12 +265,7 @@ set(SeQuant_src
         SeQuant/domain/mbpt/rdm.hpp
         SeQuant/domain/mbpt/spin.cpp
         SeQuant/domain/mbpt/spin.hpp
-        SeQuant/domain/mbpt/sr.cpp
-        SeQuant/domain/mbpt/sr.hpp
-        SeQuant/domain/mbpt/vac_av.ipp
-        )
-set_source_files_properties(
-        SeQuant/domain/mbpt/op.cpp SeQuant/domain/mbpt/sr.cpp SeQuant/domain/mbpt/mr.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+        SeQuant/domain/mbpt/vac_av.ipp)
 
 ### optional prereqs
 if (SEQUANT_EVAL_TESTS)
@@ -381,16 +385,16 @@ if (Boost_BUILT_FROM_SOURCE AND TARGET build-boost-in-SeQuant)
 endif()
 
 if (SEQUANT_IWYU)
-	find_program(iwyu_path NAMES include-what-you-use iwyu)
+    find_program(iwyu_path NAMES include-what-you-use iwyu)
 
-	if (iwyu_path)
-		set(iwyu_options_and_path
-			"${iwyu_path}"
-			-Xiwyu --cxx17ns
-			-Xiwyu --no_comments
-		)
-		set_property(TARGET SeQuant PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${iwyu_options_and_path})
-	endif()
+    if (iwyu_path)
+        set(iwyu_options_and_path
+            "${iwyu_path}"
+            -Xiwyu --cxx17ns
+            -Xiwyu --no_comments
+        )
+        set_property(TARGET SeQuant PROPERTY CXX_INCLUDE_WHAT_YOU_USE ${iwyu_options_and_path})
+    endif()
 endif()
 
 ### unit tests
@@ -416,7 +420,7 @@ if (BUILD_TESTING)
             tests/unit/test_spin.cpp
             tests/unit/test_canonicalize.cpp
             tests/unit/test_expr.cpp
-            tests/unit/test_parse_expr.cpp
+            tests/unit/test_parse.cpp
             tests/unit/test_eval_expr.cpp
             tests/unit/test_binary_node.cpp
             tests/unit/test_asy_cost.cpp
@@ -429,6 +433,7 @@ if (BUILD_TESTING)
             tests/unit/test_latex.cpp
             tests/unit/test_utilities.cpp
             tests/unit/test_export.cpp
+            tests/unit/test_meta.cpp
             )
 
     if (TARGET tiledarray)
@@ -475,7 +480,8 @@ if (BUILD_TESTING)
     add_executable(${example0} EXCLUDE_FROM_ALL
             examples/${example0}/${example0}.cpp)
     target_link_libraries(${example0} SeQuant)
-    set(${example0}_cmdline_args ";3 t std so;3 t csv so;3 lambda std so;3 lambda csv so;2 t std sf;2 t csv sf;2 lambda std sf;2 lambda csv sf")
+    # N.B. empty space, to appease foreach
+    set(${example0}_cmdline_args " ;3 t std so;3 t csv so;3 lambda std so;3 lambda csv so;2 t std sf;2 t csv sf;2 lambda std sf;2 lambda csv sf")
 
     if (TARGET Eigen3::Eigen)  # these examples require Eigen for full functionality
       # Single-Reference closed-shell Coupled-Cluster equation
@@ -540,9 +546,9 @@ if (BUILD_TESTING)
         target_link_libraries(${example7} SeQuant)
     endif (BTAS_SOURCE_DIR)
 
-
-    foreach (i RANGE 8 12)
-      math(EXPR s "${i} - 7") # map 8..12 -> 1..5
+    set(lastexample 13)
+    foreach (i RANGE 8 ${lastexample})
+      math(EXPR s "${i} - 7") # map 8..13 -> 1..6
       set(example${i} synopsis${s})
       add_executable(${example${i}} EXCLUDE_FROM_ALL
               examples/synopsis/${example${i}}.cpp)
@@ -550,18 +556,17 @@ if (BUILD_TESTING)
     endforeach ()
 
     # add tests for running examples
-    set(lastexample 13)
     foreach (i RANGE ${lastexample})
         if (TARGET ${example${i}})
             add_dependencies(examples-sequant ${example${i}})
             add_test(sequant/example/${example${i}}/build "${CMAKE_COMMAND}"
                     --build ${CMAKE_BINARY_DIR} --target ${example${i}})
             if (NOT DEFINED ${example${i}}_cmdline_args)
-                set(${example${i}}_cmdline_args "")
+                set(${example${i}}_cmdline_args " ") # N.B. empty space, to appease foreach
             endif()
             set(${example${i}}_run_counter 0)
             foreach (args ${${example${i}}_cmdline_args})
-                string(REPLACE " " ";" args ${args})
+                string(REPLACE " " ";" args "${args}")
                 add_test(NAME sequant/example/${example${i}}/run/${${example${i}}_run_counter}
                          COMMAND ${example${i}} ${args}
                          WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/examples)

@@ -24,14 +24,11 @@ std::wstring to_itf(const itf::CodeBlock &block) {
 
 namespace itf {
 
-// TODO: Get rid of hard-coded index assignments
-static IndexSpace::Type occ = IndexSpace::active_occupied;
-static IndexSpace::Type virt = IndexSpace::active_unoccupied;
-
 struct IndexTypeComparer {
   bool operator()(const IndexSpace::Type &lhs,
                   const IndexSpace::Type &rhs) const {
-    assert(occ < virt);
+    assert(get_default_context().index_space_registry()->retrieve("i").type() <
+           get_default_context().index_space_registry()->retrieve("a").type());
     return lhs < rhs;
   }
 };
@@ -47,7 +44,8 @@ Tensor generateResultTensor(ExprPtr expr) {
   // to the result of the expression
   IndexGroups externals = get_unique_indices(expr);
 
-  return Tensor(L"Result", std::move(externals.bra), std::move(externals.ket));
+  return Tensor(L"Result", bra(std::move(externals.bra)),
+                ket(std::move(externals.ket)));
 }
 
 Result::Result(ExprPtr expression, bool importResultTensor)
@@ -148,7 +146,8 @@ std::vector<Contraction> to_contractions(const Product &product,
       // There is no notion of bra and ket for intermediates, so we dump all
       // indices in the bra for now
       Tensor intermediate(intermediateName.data(),
-                          std::move(intermediateIndices), std::vector<Index>{});
+                          bra(std::move(intermediateIndices)),
+                          ket(std::vector<Index>{}));
 
       std::vector<Contraction> intermediateContractions =
           to_contractions(factor, intermediate);
@@ -269,20 +268,31 @@ void one_electron_integral_remapper(
     std::swap(braIndices[0], ketIndices[0]);
   }
 
-  expr =
-      ex<Tensor>(tensor.label(), std::move(braIndices), std::move(ketIndices));
+  expr = ex<Tensor>(tensor.label(), bra(std::move(braIndices)),
+                    ket(std::move(ketIndices)));
 }
 
-template <typename Container>
-bool isExceptionalJ(const Container &braIndices, const Container &ketIndices) {
+template <typename BraContainer, typename KetContainer>
+bool isExceptionalJ(const BraContainer &braIndices,
+                    const KetContainer &ketIndices) {
   assert(braIndices.size() == 2);
   assert(ketIndices.size() == 2);
   // integrals with 3 external (virtual) indices ought to be converted to
   // J-integrals
-  return braIndices[0].space().type() == virt &&
-         braIndices[1].space().type() == virt &&
-         ketIndices[0].space().type() == virt &&
-         ketIndices[1].space().type() != virt;
+  return braIndices[0].space().type() == get_default_context()
+                                             .index_space_registry()
+                                             ->retrieve("a")
+                                             .type() &&
+         braIndices[1].space().type() == get_default_context()
+                                             .index_space_registry()
+                                             ->retrieve("a")
+                                             .type() &&
+         ketIndices[0].space().type() == get_default_context()
+                                             .index_space_registry()
+                                             ->retrieve("a")
+                                             .type() &&
+         ketIndices[1].space().type() !=
+             get_default_context().index_space_registry()->retrieve("a").type();
 }
 
 void two_electron_integral_remapper(
@@ -393,8 +403,8 @@ void two_electron_integral_remapper(
     }
   }
 
-  expr = ex<Tensor>(std::move(tensorLabel), std::move(braIndices),
-                    std::move(ketIndices));
+  expr = ex<Tensor>(std::move(tensorLabel), bra(std::move(braIndices)),
+                    ket(std::move(ketIndices)));
 }
 
 void integral_remapper(ExprPtr &expr, std::wstring_view oneElectronIntegralName,
@@ -500,10 +510,14 @@ std::wstring to_itf(const Tensor &tensor, bool includeIndexing = true) {
 
     assert(components.id <= 7);
 
-    if (components.space.type() == IndexSpace::active_occupied) {
+    if (components.space.type() ==
+        get_default_context().index_space_registry()->retrieve("i").type()) {
       tags += L"c";
       indices += static_cast<wchar_t>(L'i' + components.id);
-    } else if (components.space.type() == IndexSpace::active_unoccupied) {
+    } else if (components.space.type() == get_default_context()
+                                              .index_space_registry()
+                                              ->retrieve("a")
+                                              .type()) {
       tags += L"e";
       indices += static_cast<wchar_t>(L'a' + components.id);
     } else {
@@ -528,11 +542,15 @@ std::wstring ITFGenerator::generate() const {
     wchar_t baseLabel;
     std::wstring spaceLabel;
     std::wstring spaceTag;
-    if (iter->first.type() == IndexSpace::active_occupied) {
+    if (iter->first.type() ==
+        get_default_context().index_space_registry()->retrieve("i").type()) {
       baseLabel = L'i';
       spaceLabel = L"Closed";
       spaceTag = L"c";
-    } else if (iter->first.type() == IndexSpace::active_unoccupied) {
+    } else if (iter->first.type() == get_default_context()
+                                         .index_space_registry()
+                                         ->retrieve("a")
+                                         .type()) {
       baseLabel = L'a';
       spaceLabel = L"External";
       spaceTag = L"e";

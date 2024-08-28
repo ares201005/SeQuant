@@ -9,7 +9,7 @@
 
 #include <SeQuant/core/container.hpp>
 #include <SeQuant/core/eval_node.hpp>
-#include <SeQuant/core/parse_expr.hpp>
+#include <SeQuant/core/parse.hpp>
 
 #include <examples/eval/calc_info.hpp>
 #include <examples/eval/data_info.hpp>
@@ -125,8 +125,6 @@ class SequantEvalScfTA final : public SequantEvalScf {
         data_world_{ta_world, calc_info.fock_eri, calc_info.eqn_opts.excit} {
     assert(info_.eqn_opts.excit >= 2 &&
            "At least double excitation (CCSD) is required!");
-
-    using HRC = std::chrono::high_resolution_clock;
 
     auto const exprs = info_.exprs();
 

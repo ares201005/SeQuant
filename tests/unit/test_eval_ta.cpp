@@ -2,9 +2,10 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <SeQuant/core/context.hpp>
-#include <SeQuant/core/parse_expr.hpp>
+#include <SeQuant/core/parse.hpp>
 #include <SeQuant/core/tensor.hpp>
 #include <SeQuant/domain/eval/eval.hpp>
+#include <SeQuant/domain/mbpt/convention.hpp>
 
 #include <tiledarray.h>
 #include <boost/regex.hpp>
@@ -26,7 +27,7 @@ auto tensor_to_key(sequant::Tensor const& tnsr) {
 
   sequant::NestedTensorIndices oixs{tnsr};
   if (oixs.inner.empty()) {
-    auto const tnsr_deparsed = sequant::deparse_expr(tnsr.clone(), false);
+    auto const tnsr_deparsed = sequant::deparse(tnsr.clone(), false);
     return boost::regex_replace(tnsr_deparsed, idx_rgx, formatter);
   } else {
     using ranges::views::intersperse;
@@ -131,13 +132,13 @@ class rand_tensor_yield {
     }
 
     ERPtr result{nullptr};
+    auto isr = get_default_context().index_space_registry();
 
-    auto make_extents = [this](auto&& ixs) -> container::svector<size_t> {
-      return ixs | transform([this](auto const& ix) -> size_t {
-               assert(ix.space() == IndexSpace::active_occupied ||
-                      ix.space() == IndexSpace::active_unoccupied);
-               return ix.space() == IndexSpace::active_occupied ? nocc_
-                                                                : nvirt_;
+    auto make_extents = [this, &isr](auto&& ixs) -> container::svector<size_t> {
+      return ixs | transform([this, &isr](auto const& ix) -> size_t {
+               assert(ix.space() == isr->retrieve(L"i") ||
+                      ix.space() == isr->retrieve(L"a"));
+               return ix.space() == isr->retrieve(L"i") ? nocc_ : nvirt_;
              }) |
              ranges::to<container::svector<size_t>>;
     };

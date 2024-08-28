@@ -200,6 +200,11 @@ size_t hash_braket(T const& bk) noexcept {
   for (auto const& idx : bk) {
     hash::combine(h, hash::value(idx.space().type().to_int32()));
     hash::combine(h, hash::value(idx.space().qns().to_int32()));
+    if (idx.has_proto_indices()) {
+      hash::combine(h, hash::value(idx.proto_indices().size()));
+      for (auto&& i : idx.proto_indices())
+        hash::combine(h, hash::value(i.label()));
+    }
   }
   return h;
 }
@@ -393,8 +398,8 @@ ExprPtr make_prod(EvalExpr const& left, EvalExpr const& right) noexcept {
   auto const& t1 = left.as_tensor();
   auto const& t2 = right.as_tensor();
 
-  auto [bra, ket] = target_braket(t1, t2);
-  if (bra.empty() && ket.empty()) {
+  auto [b, k] = target_braket(t1, t2);
+  if (b.empty() && k.empty()) {
     // dot product
     return ex<Variable>(var_label);
   } else {
@@ -402,7 +407,7 @@ ExprPtr make_prod(EvalExpr const& left, EvalExpr const& right) noexcept {
     auto ts = tensor_symmetry_prod(left, right);
     auto ps = particle_symmetry(ts);
     auto bks = get_default_context().braket_symmetry();
-    return ex<Tensor>(L"I", bra, ket, ts, bks, ps);
+    return ex<Tensor>(L"I", bra(std::move(b)), ket(std::move(k)), ts, bks, ps);
   }
 }
 

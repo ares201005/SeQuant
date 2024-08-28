@@ -90,7 +90,7 @@ class antisymm_element {
 
     int total_swaps = 0;  // even # swaps produces positive and odd # of swaps
                           // produce negative
-    int counter = 0;
+    [[maybe_unused]] int counter = 0;
 
     bool do_next_perm = true;
 
@@ -220,7 +220,8 @@ class antisymm_element {
               new_kets.push_back(unique_kets_list[j].second[index_label_pos]);
               index_label_pos++;
             }
-            auto new_tensor = ex<Tensor>(label, new_bras, new_kets);
+            auto new_tensor = ex<Tensor>(label, bra(std::move(new_bras)),
+                                         ket(std::move(new_kets)));
             new_product = new_tensor * new_product;
             new_product->canonicalize();
           }
@@ -234,7 +235,7 @@ class antisymm_element {
               new_crea.push_back(unique_kets_list[j].second[index_label_pos]);
               index_label_pos++;
             }
-            auto new_Nop = ex<FNOperator>(new_crea, new_anni);
+            auto new_Nop = ex<FNOperator>(cre(new_crea), ann(new_anni));
             new_product = new_product * new_Nop;
             // std::wcout << "product:  " << to_latex(new_product) << std::endl;
             new_product->canonicalize();
@@ -262,7 +263,7 @@ class antisymm_element {
   ExprPtr result;
 };
 
-//@brief simple class to call antisymm_element on only products
+/// @brief simple class to call antisymm_element on only products
 class antisymmetrize {
  public:
   ExprPtr result = ex<Constant>(0);
@@ -419,7 +420,8 @@ ExprPtr max_similarity(const std::vector<Index>& original_upper,
         }
         if (new_pairs > og_pairs) {
           factor = ex<Constant>(-1) * ex<Tensor>(factor->as<Tensor>().label(),
-                                                 current_lower, current_upper);
+                                                 bra(std::move(current_lower)),
+                                                 ket(std::move(current_upper)));
         }
       } else if (factor->is<FNOperator>()) {
         std::vector<Index> current_upper;
@@ -456,7 +458,8 @@ ExprPtr max_similarity(const std::vector<Index>& original_upper,
         }
         if (new_pairs > og_pairs) {
           factor =
-              ex<Constant>(-1) * ex<FNOperator>(current_upper, current_lower);
+              ex<Constant>(-1) * ex<FNOperator>(cre(std::move(current_upper)),
+                                                ann(std::move(current_lower)));
         }
       }
     }

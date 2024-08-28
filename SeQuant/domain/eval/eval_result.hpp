@@ -4,6 +4,7 @@
 #include <SeQuant/core/algorithm.hpp>
 #include <SeQuant/core/container.hpp>
 #include <SeQuant/core/hash.hpp>
+#include <SeQuant/core/index.hpp>
 #include <SeQuant/core/logger.hpp>
 
 #include <TiledArray/einsum/tiledarray.h>
@@ -280,11 +281,11 @@ auto index_hash(Iterable const& bk) {
     // The BTAS expects index types to be long by default.
     // There is no straight-forward way to turn the default.
     // Hence, here we explicitly cast the size_t values to long
-    // Which is a potentailly narrowing conversion leading to
+    // Which is a potentially narrowing conversion leading to
     // integral overflow. Hence, the values in the returned
     // container are mixed negative and positive integers (long type)
     //
-    return static_cast<long>(sequant::hash::value(idx.label()));
+    return static_cast<long>(sequant::hash::value(Index{idx}.label()));
   });
 }
 
@@ -460,8 +461,8 @@ auto antisymmetrize_btas(
 template <typename... Args>
 inline void log_result(Args const&... args) noexcept {
 #ifdef SEQUANT_EVAL_TRACE
-  auto& l = Logger::get_instance();
-  if (l.log_level_eval > 1) write_log(l, args...);
+  auto l = Logger::instance();
+  if (l->log_level_eval > 1) write_log(l, args...);
 #endif
 }
 

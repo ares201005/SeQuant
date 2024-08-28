@@ -1,8 +1,7 @@
 //
 // Created by Eduard Valeyev on 2023-10-30.
 //
-
-//  operator-level vac_av is same for SR and MR, to be included from {sr,mr}.hpp
+using namespace sequant::mbpt;
 
 /// defines the default op connections
 inline std::vector<std::pair<mbpt::OpType, mbpt::OpType>>
@@ -48,6 +47,27 @@ inline std::vector<std::pair<std::wstring, std::wstring>> to_label_connections(
     op_connect_wstr.emplace_back(optype2label.at(op1), optype2label.at(op2));
   }
   return op_connect_wstr;
+}
+
+/// @brief lowers an expression composed of Operators to tensor form
+/// @param[in] expr input expression
+/// @return expression with all Operators lowered to tensor form
+/// @note mutates the input ExprPtr
+inline ExprPtr lower_to_tensor_form(ExprPtr& expr) {
+  auto op_lowerer = [](ExprPtr& leaf) {
+    if (leaf.is<op_t>()) leaf = leaf.as<op_t>().tensor_form();
+  };
+  expr->visit(op_lowerer, /* atoms only = */ true);
+  return expr;
+}
+
+///// @brief lowers an expression composed of Operators to tensor form
+///// @param[in] expr_inp input expression
+///// @return expression with all Operators lowered to tensor form
+inline ExprPtr lower_to_tensor_form(const ExprPtr& expr_inp) {
+  auto expr = expr_inp->clone();
+  lower_to_tensor_form(expr);
+  return expr;
 }
 
 /// computes the vacuum expectation value (VEV)

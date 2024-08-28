@@ -8,8 +8,8 @@
 #include <SeQuant/core/container.hpp>
 #include <SeQuant/core/expr.hpp>
 #include <SeQuant/core/index.hpp>
+#include <SeQuant/core/parse.hpp>
 #include <SeQuant/core/parse/ast.hpp>
-#include <SeQuant/core/parse_expr.hpp>
 #include <SeQuant/core/space.hpp>
 #include <SeQuant/core/tensor.hpp>
 #include <SeQuant/core/utility/string.hpp>
@@ -41,7 +41,8 @@ Index to_index(const parse::ast::Index &index,
   for (const parse::ast::IndexLabel &current : index.protoLabels) {
     try {
       std::wstring label = current.label + L"_" + std::to_wstring(current.id);
-      IndexSpace space = IndexSpace::instance(label);
+      IndexSpace space =
+          get_default_context().index_space_registry()->retrieve(label);
       protoIndices.push_back(Index(std::move(label), std::move(space)));
     } catch (const IndexSpace::bad_key &) {
       auto [offset, length] = get_pos(current, position_cache, begin);
@@ -59,7 +60,8 @@ Index to_index(const parse::ast::Index &index,
   try {
     std::wstring label =
         index.label.label + L"_" + std::to_wstring(index.label.id);
-    IndexSpace space = IndexSpace::instance(label);
+    IndexSpace space =
+        get_default_context().index_space_registry()->retrieve(label);
     return Index(std::move(label), std::move(space), std::move(protoIndices));
   } catch (const IndexSpace::bad_key &e) {
     auto [offset, length] = get_pos(index.label, position_cache, begin);
@@ -179,8 +181,8 @@ ExprPtr ast_to_expr(const parse::ast::NullaryValue &value,
       auto [offset, length] =
           get_pos(tensor, position_cache.get(), begin.get());
 
-      return ex<Tensor>(tensor.name, std::move(braIndices),
-                        std::move(ketIndices),
+      return ex<Tensor>(tensor.name, bra(std::move(braIndices)),
+                        ket(std::move(ketIndices)),
                         to_symmetry(tensor.symmetry, offset + length - 1,
                                     begin.get(), default_symmetry));
     }

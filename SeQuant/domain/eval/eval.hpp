@@ -27,15 +27,15 @@ namespace {
 template <typename... Args>
 void log_eval(Args const&... args) noexcept {
 #ifdef SEQUANT_EVAL_TRACE
-  auto& l = Logger::get_instance();
-  if (l.log_level_eval > 0) write_log(l, "[EVAL] ", args...);
+  auto l = Logger::instance();
+  if (l->log_level_eval > 0) write_log(l, "[EVAL] ", args...);
 #endif
 }
 
 [[maybe_unused]] void log_cache_access(size_t key, CacheManager const& cm) {
 #ifdef SEQUANT_EVAL_TRACE
-  auto& l = Logger::get_instance();
-  if (l.log_level_eval > 0) {
+  auto l = Logger::instance();
+  if (l->log_level_eval > 0) {
     assert(cm.exists(key));
     auto max_l = cm.max_life(key);
     auto cur_l = cm.life(key);
@@ -52,8 +52,8 @@ void log_eval(Args const&... args) noexcept {
 
 [[maybe_unused]] void log_cache_store(size_t key, CacheManager const& cm) {
 #ifdef SEQUANT_EVAL_TRACE
-  auto& l = Logger::get_instance();
-  if (l.log_level_eval > 0) {
+  auto l = Logger::instance();
+  if (l->log_level_eval > 0) {
     assert(cm.exists(key));
     write_log(l,  //
               "[CACHE] Stored key: ", key, ".\n");
@@ -101,7 +101,8 @@ constexpr bool IsIterableOfEvaluableNodes{};
 
 template <typename Iterable>
 constexpr bool IsIterableOfEvaluableNodes<
-    Iterable, std::enable_if_t<IsEvaluable<IteredT<Iterable>>>> = true;
+    Iterable, std::enable_if_t<IsEvaluable<meta::range_value_t<Iterable>>>> =
+    true;
 
 }  // namespace
 
@@ -311,7 +312,8 @@ auto evaluate(NodeT const& node, Le&& le, Args&&... args) {
 ///
 template <typename NodesT, typename Le, typename... Args,
           std::enable_if_t<IsIterableOfEvaluableNodes<NodesT>, bool> = true,
-          std::enable_if_t<IsLeafEvaluator<IteredT<NodesT>, Le>, bool> = true>
+          std::enable_if_t<IsLeafEvaluator<meta::range_value_t<NodesT>, Le>,
+                           bool> = true>
 auto evaluate(NodesT const& nodes, Le const& le, Args&&... args) {
   auto iter = std::begin(nodes);
   auto end = std::end(nodes);
@@ -372,7 +374,8 @@ auto evaluate(NodeT const& node,    //
 ///
 template <typename NodesT, typename Annot, typename Le, typename... Args,
           std::enable_if_t<IsIterableOfEvaluableNodes<NodesT>, bool> = true,
-          std::enable_if_t<IsLeafEvaluator<IteredT<NodesT>, Le>, bool> = true>
+          std::enable_if_t<IsLeafEvaluator<meta::range_value_t<NodesT>, Le>,
+                           bool> = true>
 auto evaluate(NodesT const& nodes,  //
               Annot const& layout,  //
               Le const& le, Args&&... args) {

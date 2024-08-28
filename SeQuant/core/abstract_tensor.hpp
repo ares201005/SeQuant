@@ -150,8 +150,6 @@ class AbstractTensor {
 /// @name customization points to support generic algorithms on AbstractTensor
 /// objects.
 /// @{
-inline auto bra(const AbstractTensor& t) { return t._bra(); }
-inline auto ket(const AbstractTensor& t) { return t._ket(); }
 inline auto braket(const AbstractTensor& t) { return t._braket(); }
 inline auto bra_rank(const AbstractTensor& t) { return t._bra_rank(); }
 inline auto ket_rank(const AbstractTensor& t) { return t._ket_rank(); }
@@ -254,7 +252,7 @@ class TensorCanonicalizer {
     return cardinal_tensor_labels_accessor();
   }
 
-  /// @param cardinal_tensor_labels a list of Tensor labels with lexicographic
+  /// @param labels a list of Tensor labels with lexicographic
   /// preference (in order)
   static void set_cardinal_tensor_labels(
       const container::vector<std::wstring>& labels) {
@@ -356,7 +354,7 @@ class DefaultTensorCanonicalizer : public TensorCanonicalizer {
         //      std::wcout << "canonicalizing " << to_latex(t);
         IndexSwapper::thread_instance().reset();
         // std::{stable_}sort does not necessarily use swap! so must implement
-        // sort outselves .. thankfully ranks will be low so can stick with
+        // sort ourselves .. thankfully ranks will be low so can stick with
         // bubble
         bubble_sort(begin(_bra), end(_bra), comp);
         bubble_sort(begin(_ket), end(_ket), comp);
