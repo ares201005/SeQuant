@@ -11,22 +11,10 @@
 namespace sequant::mbpt {
 
 std::vector<std::wstring> cardinal_tensor_labels() {
-  return {L"κ",  L"γ",
-          L"Γ",  L"A",
-          L"S",  L"P",
-          L"L",  L"λ",
-          L"λ¹", L"h",
-          L"f",  L"f̃",
-          L"g",  L"t",
-          L"t¹", L"R",
-          L"F",  L"X",
-          L"μ",  L"V",
-          L"Ṽ",  L"B",
-          L"U",  L"GR",
-          L"C",  overlap_label(),
-          L"a",  L"ã",
-          L"b",  L"b̃",
-          L"E"};
+  return {L"κ", L"γ", L"Γ", L"A", L"S", L"P", L"L",  L"λ", L"λ¹",
+          L"h", L"f", L"f̃", L"g", L"θ", L"t", L"t¹", L"R", L"F",
+          L"X", L"μ", L"V", L"Ṽ", L"B", L"U", L"GR", L"C", overlap_label(),
+          L"a", L"ã", L"b", L"b̃", L"E"};
 }
 
 std::wstring to_wstring(OpType op) {
@@ -51,6 +39,7 @@ OpClass to_class(OpType op) {
     case OpType::A:
     case OpType::S:
     case OpType::h_1:
+    case OpType::θ:
       return OpClass::gen;
     case OpType::Q:
       return OpClass::disp;
@@ -346,6 +335,9 @@ std::wstring to_latex(const mbpt::Operator<mbpt::qns_t, S>& op) {
   if (it != label2optype.end()) {  // handle special cases
     optype = it->second;
     if (to_class(optype) == OpClass::gen) {
+      if (optype == OpType::θ) {  // special case for θ
+        result += L"_{" + std::to_wstring(op()[0].upper()) + L"}";
+      }
       result += L"}";
       return result;
     }
@@ -613,6 +605,10 @@ ExprPtr F(bool use_tensor, IndexSpace reference_occupied) {
   }
 }
 
+ExprPtr θ(std::size_t K) {
+  return OpMaker<Statistics::FermiDirac>(OpType::θ, K)();
+}
+
 ExprPtr T_(std::size_t K) {
   return OpMaker<Statistics::FermiDirac>(OpType::t, K)();
 }
@@ -675,7 +671,7 @@ ExprPtr P(nₚ np, nₕ nh) {
 
 ExprPtr A(nₚ np, nₕ nh) {
   assert(!(np == 0 && nh == 0));
-  // if they are not zero, Kh and Kp should have the same sign
+  // if one of them is not zero, nh and np should have the same sign
   if (np != 0 && nh != 0) {
     assert((np > 0 && nh > 0) || (np < 0 && nh < 0));
   }
@@ -685,20 +681,21 @@ ExprPtr A(nₚ np, nₕ nh) {
   if (nh > 0)  // ex
     for ([[maybe_unused]] auto i : ranges::views::iota(0, nh))
       annihilators.emplace_back(get_hole_space(Spin::any));
-  else  // deex
+  else if (nh < 0)  // deex
     for ([[maybe_unused]] auto i : ranges::views::iota(0, -nh))
       creators.emplace_back(get_hole_space(Spin::any));
   if (np > 0)  // ex
     for ([[maybe_unused]] auto i : ranges::views::iota(0, np))
       creators.emplace_back(get_particle_space(Spin::any));
-  else  // deex
+  else if (np < 0)  // deex
     for ([[maybe_unused]] auto i : ranges::views::iota(0, -np))
       annihilators.emplace_back(get_particle_space(Spin::any));
+  // don't populate if rank is zero
 
   std::optional<OpMaker<Statistics::FermiDirac>::UseDepIdx> dep;
   if (get_default_mbpt_context().csv() == mbpt::CSV::Yes)
-    dep = np > 0 ? OpMaker<Statistics::FermiDirac>::UseDepIdx::Bra
-                 : OpMaker<Statistics::FermiDirac>::UseDepIdx::Ket;
+    dep = (np > 0 || nh > 0) ? OpMaker<Statistics::FermiDirac>::UseDepIdx::Bra
+                             : OpMaker<Statistics::FermiDirac>::UseDepIdx::Ket;
   return OpMaker<Statistics::FermiDirac>(
       OpType::A, cre(creators), ann(annihilators))(dep, {Symmetry::antisymm});
 }
@@ -808,6 +805,16 @@ ExprPtr H(std::size_t k) {
   return k == 1 ? H_(1) : H_(1) + H_(2);
 }
 
+ExprPtr θ(std::size_t K) {
+  assert(K > 0);
+  return ex<op_t>([]() -> std::wstring_view { return L"θ"; },
+                  [=]() -> ExprPtr { return tensor::θ(K); },
+                  [=](qnc_t& qns) {
+                    qnc_t op_qnc_t = general_type_qns(K);
+                    qns = combine(op_qnc_t, qns);
+                  });
+}
+
 ExprPtr T_(std::size_t K) {
   assert(K > 0);
   return ex<op_t>([]() -> std::wstring_view { return L"t"; },
@@ -862,10 +869,12 @@ ExprPtr F(bool use_f_tensor, IndexSpace occupied_density) {
 
 ExprPtr A(nₚ np, nₕ nh) {
   assert(!(nh == 0 && np == 0));
-  // if they are not zero, Kh and Kp should have the same sign
+  // if one of them is not zero, nh and np should have the same sign
   if (nh != 0 && np != 0) {
     assert((nh > 0 && np > 0) || (nh < 0 && np < 0));
   }
+  // if np or nh is negative, it's a deexcitation operator
+  const auto deexcitation = (np < 0 || nh < 0);
 
   auto particle_space = get_particle_space(Spin::any);
   auto hole_space = get_hole_space(Spin::any);
@@ -874,7 +883,7 @@ ExprPtr A(nₚ np, nₕ nh) {
                   [=](qnc_t& qns) {
                     const std::size_t abs_nh = std::abs(nh);
                     const std::size_t abs_np = std::abs(np);
-                    if (np < 0) {
+                    if (deexcitation) {
                       qnc_t op_qnc_t = generic_deexcitation_qns(
                           abs_np, abs_nh, particle_space, hole_space);
                       qns = combine(op_qnc_t, qns);
@@ -1099,7 +1108,7 @@ ExprPtr vac_av(ExprPtr expr, std::vector<std::pair<int, int>> nop_connections,
   wick.full_contractions(full_contractions);
   auto result = wick.compute();
   simplify(result);
-  // std::wcout << "post wick: " << to_latex_align(result,20,1) << std::endl;
+
   if (Logger::instance().wick_stats) {
     std::wcout << "WickTheorem stats: # of contractions attempted = "
                << wick.stats().num_attempted_contractions

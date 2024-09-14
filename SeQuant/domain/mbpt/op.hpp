@@ -78,6 +78,7 @@ enum class OpType {
   eQ,   //!< e-p coupling operator a^\dag_u a_v (b^\dag_n + b_n)
   f̃,    //!< closed Fock operator (i.e. Fock operator due to fully-occupied
         //!< orbitals)
+  θ,    //!< general fock space operator
   g,    //!< 2-body Coulomb
   t,    //!< cluster amplitudes
   λ,    //!< deexcitation cluster amplitudes
@@ -107,6 +108,7 @@ inline const std::map<OpType, std::wstring> optype2label{
     {OpType::eQ, L"eQ"},
     {OpType::f̃, L"f̃"},
     {OpType::g, L"g"},
+    {OpType::θ, L"θ"},
     {OpType::t, L"t"},
     {OpType::λ, L"λ"},
     {OpType::A, L"A"},
@@ -944,6 +946,9 @@ ExprPtr H(std::size_t k = 2);
 /// orbitals which may have non-zero density.
 ExprPtr F(bool use_tensor = true, IndexSpace reference_occupied = {L"", 0});
 
+/// A general operator of rank \p K
+ExprPtr θ(std::size_t K);
+
 /// Makes particle-conserving excitation operator of rank \p K based on the
 /// defined context
 ExprPtr T_(std::size_t K);
@@ -1070,6 +1075,9 @@ ExprPtr H(std::size_t k = 2);
 /// construction requires user to specify the IndexSpace corresponding to all
 /// orbitals which may have non-zero density.
 ExprPtr F(bool use_tensor = true, IndexSpace reference_occupied = {L"", 0});
+
+/// A general operator of rank \p K
+ExprPtr θ(std::size_t K);
 
 /// Makes particle-conserving excitation operator of rank \p K
 ExprPtr T_(std::size_t K);
