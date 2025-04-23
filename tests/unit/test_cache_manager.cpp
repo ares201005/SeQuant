@@ -1,8 +1,11 @@
 #include <SeQuant/domain/eval/cache_manager.hpp>
+#include <SeQuant/domain/eval/result.hpp>
 #include <iostream>
 #include <range/v3/view.hpp>
 
 #include <catch2/catch_test_macros.hpp>
+
+#include "catch2_sequant.hpp"
 
 namespace sequant {
 struct TestCacheManager {};
@@ -14,17 +17,17 @@ struct CacheManager::access_by<TestCacheManager> {
 
 }  // namespace sequant
 
-TEST_CASE("TEST_CACHE_MANAGER", "[cache_manager]") {
+TEST_CASE("cache_manager", "[cache_manager]") {
   using ranges::views::concat;
   using ranges::views::zip;
   using manager_type = sequant::CacheManager;
   using key_type = size_t;
   using count_type = size_t;
-  using data_type = sequant::ERPtr;
+  using data_type = sequant::ResultPtr;
   using tester_type = manager_type::access_by<sequant::TestCacheManager>;
 
   auto eval_result = [](int x) {
-    return sequant::eval_result<sequant::EvalScalar<int>>(x);
+    return sequant::eval_result<sequant::ResultScalar<int>>(x);
   };
 
   auto const tester = tester_type{};
@@ -65,7 +68,7 @@ TEST_CASE("TEST_CACHE_MANAGER", "[cache_manager]") {
                      ranges::to<sequant::container::map<key_type, data_type>>;
     for (auto&& [k, v] : kvs) {
       // NOTE: man.store() calls man.access() implicitly and
-      // returns a ERPtr
+      // returns a ResultPtr
       // hence, a count of lifetime is lost right here
       REQUIRE(man.store(k, v));
     }

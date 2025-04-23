@@ -1,10 +1,12 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include "catch2_sequant.hpp"
+
 #include <SeQuant/core/optimize.hpp>
 #include <SeQuant/core/parse.hpp>
 #include <SeQuant/domain/eval/eval.hpp>
-#include <SeQuant/domain/eval/eval_result.hpp>
+#include <SeQuant/domain/eval/result.hpp>
 
 #include <btas/btas.h>
 #include <btas/tensor_func.h>
@@ -16,7 +18,17 @@
 namespace {
 
 auto eval_node(sequant::ExprPtr const& expr) {
-  return sequant::eval_node<sequant::EvalExprBTAS>(expr);
+  using namespace sequant;
+  auto node = binarize(expr);
+  return transform_node(node, [](auto&& val) {
+    if (val.is_tensor()) {
+      return EvalExprBTAS(
+          *val.op_type(), val.result_type(), val.expr(),
+          val.as_tensor().indices() | ranges::to<EvalExpr::index_vector>(),
+          val.canon_phase(), val.hash_value());
+    } else
+      return EvalExprBTAS(val);
+  });
 }
 
 static auto const idx_rgx = boost::wregex{L"([ia])([↑↓])?_?(\\d+)"};
@@ -39,7 +51,7 @@ class rand_tensor_yield {
  private:
   size_t const nocc_;
   size_t const nvirt_;
-  mutable std::map<std::wstring, sequant::ERPtr> label_to_tnsr_;
+  mutable std::map<std::wstring, sequant::ResultPtr> label_to_tnsr_;
 
  public:
   rand_tensor_yield(size_t noccupied, size_t nvirtual)
@@ -70,7 +82,7 @@ class rand_tensor_yield {
     return result;
   }
 
-  sequant::ERPtr operator()(sequant::Tensor const& tnsr) const {
+  sequant::ResultPtr operator()(sequant::Tensor const& tnsr) const {
     using namespace sequant;
     std::wstring const label = tensor_to_key(tnsr);
     if (auto&& found = label_to_tnsr_.find(label);
@@ -82,7 +94,7 @@ class rand_tensor_yield {
     }
     auto t = make_rand_tensor(tnsr);
     auto&& success = label_to_tnsr_.emplace(
-        label, eval_result<EvalTensorBTAS<Tensor_t>>(std::move(t)));
+        label, eval_result<ResultTensorBTAS<Tensor_t>>(std::move(t)));
     assert(success.second && "couldn't store tensor!");
     //    std::wcout << "label = [" << label << "] NotFound in cache.
     //    Creating.."
@@ -90,15 +102,15 @@ class rand_tensor_yield {
     return success.first->second;
   }
 
-  template <typename T, typename = std::enable_if_t<sequant::IsEvaluable<T>>>
-  sequant::ERPtr operator()(T const& node) const {
+  sequant::ResultPtr operator()(
+      sequant::meta::can_evaluate auto const& node) const {
     using namespace sequant;
     if (node->result_type() == sequant::ResultType::Tensor) {
       assert(node->expr()->template is<sequant::Tensor>());
       return (*this)(node->expr()->template as<sequant::Tensor>());
     }
 
-    using result_t = EvalScalar<double>;
+    using result_t = ResultScalar<double>;
 
     assert(node->expr()->template is<sequant::Constant>());
     auto d = node->as_constant().template value<double>();
@@ -111,7 +123,7 @@ class rand_tensor_yield {
   /// \note The tensor should be already present in the yielder cache
   ///       otherwise throws assertion error. To avoid that use the other
   ///       overload of operator() that takes sequant::Tensor const&
-  sequant::ERPtr operator()(std::wstring_view label) const {
+  sequant::ResultPtr operator()(std::wstring_view label) const {
     auto&& found = label_to_tnsr_.find(label.data());
     if (found == label_to_tnsr_.end()) {
       assert(false && "attempted access of non-existent tensor!");
@@ -132,11 +144,12 @@ template <
         ,
         bool> = true>
 container::svector<long> tidxs(Iterable const& indices) noexcept {
-  return sequant::index_hash(indices) | ranges::to<container::svector<long>>;
+  return sequant::EvalExprBTAS::index_hash(indices) |
+         ranges::to<container::svector<long>>;
 }
 
 container::svector<long> tidxs(Tensor const& tnsr) noexcept {
-  return sequant::index_hash(tnsr.const_braket()) |
+  return sequant::EvalExprBTAS::index_hash(tnsr.const_braket()) |
          ranges::to<container::svector<long>>;
 }
 
@@ -166,7 +179,7 @@ container::svector<long> tidxs(std::wstring const& csv) noexcept {
 
 }  // namespace
 
-TEST_CASE("TEST_EVAL_USING_BTAS", "[eval]") {
+TEST_CASE("eval_with_btas", "[eval_btas]") {
   using ranges::views::transform;
   using namespace sequant;
   using namespace sequant;
@@ -189,14 +202,15 @@ TEST_CASE("TEST_EVAL_USING_BTAS", "[eval]") {
 
   auto eval_symm = [&yield_](sequant::ExprPtr const& expr,
                              container::svector<long> const& target_labels) {
-    return evaluate_symm(eval_node(expr), target_labels, {}, yield_)
+    auto cache = sequant::CacheManager::empty();
+    return evaluate_symm(eval_node(expr), target_labels, yield_)
         ->get<BTensorD>();
   };
 
   auto eval_antisymm = [&yield_](
                            sequant::ExprPtr const& expr,
                            container::svector<long> const& target_labels) {
-    return evaluate_antisymm(eval_node(expr), target_labels, {}, yield_)
+    return evaluate_antisymm(eval_node(expr), target_labels, yield_)
         ->get<BTensorD>();
   };
 
@@ -314,6 +328,24 @@ TEST_CASE("TEST_EVAL_USING_BTAS", "[eval]") {
     btas::scal(0.5, man1);
 
     REQUIRE(norm(eval1) == Catch::Approx(norm(man1)));
+
+    auto expr2 = parse_antisymm(L"R_{a1,a2}^{i1}");
+    auto tidx2 = tidxs(L"a_1,a_2,i_1");
+    auto eval2 = eval_antisymm(expr2, tidx2);
+
+    auto const& r = yield(L"R{v,v;o}");
+    BTensorD man2{r.range()}, temp2{r.range()};
+    man2.fill(0.0);
+    temp2.fill(0.0);
+
+    man2 += BTensorD{permute(r, {0, 1, 2})};
+
+    temp2 += BTensorD{permute(r, {1, 0, 2})};
+    btas::scal(-1.0, temp2);
+    man2 += temp2;
+    temp2.clear();
+
+    REQUIRE(norm(eval2) == Catch::Approx(norm(man2)));
   }
 
   SECTION("Symmetrization") {
